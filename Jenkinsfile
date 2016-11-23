@@ -33,6 +33,8 @@ pipeline {
         CXX="/usr/lib/ccache/g++"
         CCACHE_DIR="/home/jim/.ccache"
         CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4"
+        GCC_ROOT="/usr/lib/ccache"
+        CW_GCC_DIR="/usr/lib/ccache"
     }
     parameters {
         booleanParam(defaultValue: false, description: 'Removes workspace completely before checkout and build', name: 'action_DistcleanRebuild')
