@@ -33,9 +33,7 @@ pipeline {
 //        CC="/usr/lib/ccache/gcc"
 //        CXX="/usr/lib/ccache/g++"
         CCACHE_DIR="/home/jim/.ccache"
-        CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4"
-        GCC_ROOT="/usr/lib/ccache"
-        CW_GCC_DIR="/usr/lib/ccache"
+        CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin"
 //        CCACHE_LOGFILE="/dev/stderr"
     }
     parameters {
@@ -130,7 +128,16 @@ sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIO
     -e 's,^\\(export ENABLE_IPP_PRINTING=\\),### \\1,' \\
     -e 's,^\\(export ENABLE_SMB_PRINTING=\\),### \\1,' \\
 < ./usr/src/tools/env/illumos.sh > ./illumos.sh \\
-&& chmod +x illumos.sh
+&& chmod +x illumos.sh || exit
+
+if [ -x "/usr/bin/ccache" ]; then
+    mkdir -p ccache/bin || exit
+    for F in gcc cc g++ c++ i386-pc-solaris2.11-c++ i386-pc-solaris2.11-gcc i386-pc-solaris2.11-g++ i386-pc-solaris2.11-gcc-4.4.4 cc1 cc1obj cc1plus collect2; do
+        ln -s /usr/bin/ccache "ccache/bin/$F" || exit
+    done
+    echo "export GCC_ROOT='`pwd`/ccache'" >> ./illumos.sh
+    echo 'export CW_GCC_DIR="\$GCC_ROOT/bin"' >> ./illumos.sh
+fi
 """
                 }
             }
