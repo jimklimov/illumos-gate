@@ -130,11 +130,13 @@ sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIO
 < ./usr/src/tools/env/illumos.sh > ./illumos.sh \\
 && chmod +x illumos.sh || exit
 
-if [ -x "/usr/bin/ccache" ] && [ ! -d ccache/bin ] ; then
-    mkdir -p ccache/bin || exit
-    for F in gcc cc g++ c++ i386-pc-solaris2.11-c++ i386-pc-solaris2.11-gcc i386-pc-solaris2.11-g++ i386-pc-solaris2.11-gcc-4.4.4 cc1 cc1obj cc1plus collect2; do
-        ln -s /usr/bin/ccache "ccache/bin/$F" || exit
-    done
+if [ -x "/usr/bin/ccache" ]; then
+    if [ ! -d ccache/bin ] ; then
+        mkdir -p ccache/bin || exit
+        for F in gcc cc g++ c++ i386-pc-solaris2.11-c++ i386-pc-solaris2.11-gcc i386-pc-solaris2.11-g++ i386-pc-solaris2.11-gcc-4.4.4 cc1 cc1obj cc1plus collect2; do
+            ln -s /usr/bin/ccache "ccache/bin/$F" || exit
+        done
+    fi
     echo "export GCC_ROOT='`pwd`/ccache'" >> ./illumos.sh
     echo 'export CW_GCC_DIR="\$GCC_ROOT/bin"' >> ./illumos.sh
 fi
