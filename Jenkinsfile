@@ -170,7 +170,7 @@ time ./nightly.sh \${str_option_BuildIncremental} illumos.sh;
                 always {
                     dir("${env.WORKSPACE}/${params.REL_BUILDDIR}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.* | tail -1`/mail_msg"'
-                        sh 'echo "BUILD LOG - LONG:";  cat "`ls -1d log/log.* | tail -1`/nightly.log"'
+                        // sh 'echo "BUILD LOG - LONG:";  cat "`ls -1d log/log.* | tail -1`/nightly.log"'
                     }
                 }
             }
