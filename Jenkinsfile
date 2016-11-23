@@ -50,8 +50,8 @@ pipeline {
 //        CC="/usr/lib/ccache/gcc"
 //        CXX="/usr/lib/ccache/g++"
         _ESC_CPP="/usr/lib/cpp"	// Workaround for ILLUMOS-6219, must specify Sun Studio cpp
-        CCACHE_DIR="${param.CCACHE_DIR}"
-        CCACHE_PATH="${param.CCACHE_PATH}"
+        CCACHE_DIR="${params.CCACHE_DIR}"
+        CCACHE_PATH="${params.CCACHE_PATH}"
 //        CCACHE_DIR="/home/jim/.ccache"
 //        CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin"
 //        CCACHE_LOGFILE="/dev/stderr"
