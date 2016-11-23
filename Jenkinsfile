@@ -28,14 +28,6 @@ pipeline {
      * On some distros you might need to explicitly add 'gcc-4.4.4-il' and/or
      * legacy "closed binaries" as tarballs or distro-maintained packages.
      */
-    environment {
-//        PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4/:/usr/lib/ccache:/usr/bin:/usr/gnu/bin:\$PATH"
-//        CC="/usr/lib/ccache/gcc"
-//        CXX="/usr/lib/ccache/g++"
-        CCACHE_DIR="/home/jim/.ccache"
-        CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin"
-//        CCACHE_LOGFILE="/dev/stderr"
-    }
     parameters {
         booleanParam(defaultValue: false, description: 'Removes workspace completely before checkout and build', name: 'action_DistcleanRebuild')
         booleanParam(defaultValue: false, description: 'Wipes workspace from untracked files before checkout and build', name: 'action_GitcleanRebuild')
@@ -49,6 +41,20 @@ pipeline {
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
         string(defaultValue: '-nCDAlmprt', description: 'The nightly.sh option flags for the illumos-gate build (gate default is -FnCDAlmprt), including the leading dash:\n* DEBUG build only (-D, -F) or DEBUG and non-DEBUG builds (just -D)\n* do not bringover (aka. pull or clone) from the parent (-n)\n* runs "make check" (-C)\n* checks for new interfaces in libraries (-A)\n* runs lint in usr/src (-l plus the LINTDIRS variable)\n* sends mail on completion (-m and the MAILTO variable)\n* creates packages for PIT/RE (-p)\n* checks for changes in ELF runpaths (-r)\n* build and use this workspaces tools in $SRC/tools (-t)', name: 'BUILDOPT_NIGHTLY_OPTIONS')
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
+        booleanParam(defaultValue: true, description: 'Use CCACHE (if available) to wrap around the GCC compiler', name: 'option_UseCCACHE')
+        string(defaultValue: '\${HOME}/.ccache', description: 'If using CCACHE across nodes, you can use a shared cache directory\nNote that if you access nodes via SSH as the same user account, this account can just have a symlink to a shared location on NFS or have wholly the same home using NFS', name: 'CCACHE_DIR')
+        string(defaultValue: '/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin', description: 'If using CCACHE across nodes, these are paths it searches for backend real compilers', name: 'CCACHE_PATH')
+    }
+    environment {
+//        PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4/:/usr/lib/ccache:/usr/bin:/usr/gnu/bin:\$PATH"
+//        CC="/usr/lib/ccache/gcc"
+//        CXX="/usr/lib/ccache/g++"
+        _ESC_CPP="/usr/lib/cpp"	// Workaround for ILLUMOS-6219, must specify Sun Studio cpp
+        CCACHE_DIR="${param.CCACHE_DIR}"
+        CCACHE_PATH="${param.CCACHE_PATH}"
+//        CCACHE_DIR="/home/jim/.ccache"
+//        CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin"
+//        CCACHE_LOGFILE="/dev/stderr"
     }
     jobProperties {
         buildDiscarder(logRotator(numToKeepStr:'10'))
@@ -119,6 +125,9 @@ pipeline {
             when {
                 params["action_PrepIllumos"] == true
             }
+            environment {
+                str_option_UseCCACHE = params["option_UseCCACHE"] ? "true" : "false"
+            }
             steps {
                 dir("${env.WORKSPACE}/${params.REL_BUILDDIR}") {
 /* TODO: Download closed bins from the internet by default/fallback? */
@@ -130,7 +139,10 @@ sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIO
 < ./usr/src/tools/env/illumos.sh > ./illumos.sh \\
 && chmod +x illumos.sh || exit
 
-if [ -x "/usr/bin/ccache" ]; then
+[ -n "${env._ESC_CPP}" ] && [ -x "${env._ESC_CPP}" ] && \\
+    echo 'export _ESC_CPP="${env._ESC_CPP}"' >> ./illumos.sh
+
+if [ "${str_option_UseCCACHE}" = "true" ] && [ -x "/usr/bin/ccache" ]; then
     if [ ! -d ccache/bin ] ; then
         mkdir -p ccache/bin || exit
         for F in gcc cc g++ c++ i386-pc-solaris2.11-c++ i386-pc-solaris2.11-gcc i386-pc-solaris2.11-g++ i386-pc-solaris2.11-gcc-4.4.4 cc1 cc1obj cc1plus collect2; do
