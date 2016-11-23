@@ -28,10 +28,11 @@ pipeline {
      * legacy "closed binaries" as tarballs or distro-maintained packages.
      */
     environment {
-        PATH="/opt/gcc-4.4.4/bin:/usr/lib/ccache:/usr/bin:/usr/gnu/bin:\$PATH"
+        PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4/:/usr/lib/ccache:/usr/bin:/usr/gnu/bin:\$PATH"
         CC="/usr/lib/ccache/gcc"
         CXX="/usr/lib/ccache/g++"
         CCACHE_DIR="/home/jim/.ccache"
+        CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4"
     }
     parameters {
         booleanParam(defaultValue: false, description: 'Removes workspace completely before checkout and build', name: 'action_DistcleanRebuild')
@@ -146,6 +147,7 @@ sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIO
                 dir("${env.WORKSPACE}/${params.REL_BUILDDIR}") {
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh """
+export CCACHE_BASEDIR="`pwd`";
 echo 'STARTING ILLUMOS-GATE BUILD (prepare to wait... a lot... and in silence!)';
 time ./nightly.sh \${str_option_BuildIncremental} illumos.sh;
 """
@@ -167,7 +169,7 @@ time ./nightly.sh \${str_option_BuildIncremental} illumos.sh;
             steps {
                 dir("${env.WORKSPACE}/${params.REL_BUILDDIR}") {
                     echo "Checking the build results in '${env.WORKSPACE}/${params.REL_BUILDDIR}' at '${env.NODE_NAME}'"
-                    sh '. illumos.sh ; make check '
+                    sh '. illumos.sh ; CCACHE_BASEDIR="`pwd`" make check '
                 }
             }
         }
