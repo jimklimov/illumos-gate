@@ -141,6 +141,7 @@ fi
             }
             steps {
                 sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                 sh """
 export CCACHE_BASEDIR="`pwd`";
 echo 'STARTING ILLUMOS-GATE BUILD (prepare to wait... a lot... and in silence!)';
