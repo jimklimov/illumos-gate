@@ -29,9 +29,9 @@ pipeline {
      * legacy "closed binaries" as tarballs or distro-maintained packages.
      */
     environment {
-        PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4/:/usr/lib/ccache:/usr/bin:/usr/gnu/bin:\$PATH"
-        CC="/usr/lib/ccache/gcc"
-        CXX="/usr/lib/ccache/g++"
+//        PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4/:/usr/lib/ccache:/usr/bin:/usr/gnu/bin:\$PATH"
+//        CC="/usr/lib/ccache/gcc"
+//        CXX="/usr/lib/ccache/g++"
         CCACHE_DIR="/home/jim/.ccache"
         CCACHE_PATH="/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4"
         GCC_ROOT="/usr/lib/ccache"
