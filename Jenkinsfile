@@ -48,6 +48,7 @@ pipeline {
         string(defaultValue: '-nl', description: 'The alternate nightly.sh option flags for the illumos-gate post-build linting (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_LINT')
         booleanParam(defaultValue: false, description: 'Enable publishing of local IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
+/* TODO: Add a sort of build to just update specifed component(s) like a driver module */
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
         string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
         booleanParam(defaultValue: true, description: 'Use CCACHE (if available) to wrap around the GCC compiler', name: 'option_UseCCACHE')
