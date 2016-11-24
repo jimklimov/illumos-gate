@@ -145,7 +145,9 @@ fi
                 sh """
 export CCACHE_BASEDIR="`pwd`";
 echo 'STARTING ILLUMOS-GATE BUILD (prepare to wait... a lot... and in silence!)';
-time ./nightly.sh \${str_option_BuildIncremental} illumos.sh;
+time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
+[ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
+exit \$RES;
 """
             }
             post {
