@@ -1,6 +1,6 @@
 #!groovy
 /*
- * This is a Jenkinsfile to automate Jenkins CI builds of uillumos-gate
+ * This is a Jenkinsfile to automate Jenkins CI builds of illumos-gate
  * as code updates come into its repo (including posted pull requests)
  * and pass the routine with CCACHE to speed this up.
  *
@@ -33,12 +33,20 @@ pipeline {
         booleanParam(defaultValue: false, description: 'Wipes workspace from untracked files before checkout and build', name: 'action_GitcleanRebuild')
         booleanParam(defaultValue: true,  description: 'Run Git to checkout or update the project sources', name: 'action_DoSCM')
         booleanParam(defaultValue: true,  description: 'Recreate "illumos.sh" with settings for the next build run', name: 'action_PrepIllumos')
-        booleanParam(defaultValue: true,  description: 'Run "nightly" script to update or rebuild the project (depending on other settings)', name: 'action_Build')
+        booleanParam(defaultValue: true,  description: 'Run "nightly" script to update or rebuild the project in one big step (depending on other settings)', name: 'action_BuildAll')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to update the project in incremental mode (overrides and disables clobber, lint, check)', name: 'option_BuildIncremental')
-        string(defaultValue: '-nCDAlmprtf', description: 'The nightly.sh option flags for the illumos-gate build (gate default is -FnCDAlmprt), including the leading dash.\nNon-DEBUG is the default build type. Recognized flags include:\n*    -A  check for ABI differences in .so files\n*    -C  check for cstyle/hdrchk errors\n*    -D  do a build with DEBUG on\n*    -F  do _not_ do a non-DEBUG build\n*    -G  gate keeper default group of options (-au)\n*    -I  integration engineer default group of options (-ampu)\n*    -M  do not run pmodes (safe file permission checker)\n*    -N  do not run protocmp\n*    -R  default group of options for building a release (-mp)\n*    -U  update proto area in the parent\n*    -f  find unreferenced files (requires -lp, conflicts with incremental)\n*    -i  do an incremental build (no "make clobber")\n*    -l  do "make lint" in \$LINTDIRS (default: \$SRC)\n*    -m  send mail to \$MAILTO at end of build\n*    -n  do not do a bringover (aka. pull or clone) from the parent\n*    -p  create packages for PIT/RE\n*    -r  check ELF runtime attributes in the proto area\n*    -t  build and use the tools in \$SRC/tools (default setting)\n*    +t  Use the build tools in \$ONBLD_TOOLS/bin\n*    -u  update proto_list_\$MACH and friends in the parent workspace; when used with -f, also build an unrefmaster.out in the parent\n*    -w  report on differences between previous and current proto areas', name: 'BUILDOPT_NIGHTLY_OPTIONS')
-        booleanParam(defaultValue: false, description: 'Run "nightly" script to "make check" the project (as a separate step, may be redundant with "m" in NIGHTLY_OPTIONS)', name: 'action_Check')
-        string(defaultValue: '-nCAFir', description: 'The alternate nightly.sh option flags for the illumos-gate post-build checks (if action_Check is selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_CHECK')
-        booleanParam(defaultValue: false, description: 'Enable publishing IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
+        string(defaultValue: '-ntCDAlmprf', description: 'The nightly.sh option flags for the illumos-gate build (gate default is -FnCDAlmprt), including the leading dash.\nNon-DEBUG is the default build type. Recognized flags include:\n*    -A  check for ABI differences in .so files\n*    -C  check for cstyle/hdrchk errors\n*    -D  do a build with DEBUG on\n*    -F  do _not_ do a non-DEBUG build\n*    -G  gate keeper default group of options (-au)\n*    -I  integration engineer default group of options (-ampu)\n*    -M  do not run pmodes (safe file permission checker)\n*    -N  do not run protocmp\n*    -R  default group of options for building a release (-mp)\n*    -U  update proto area in the parent\n*    -f  find unreferenced files (requires -lp, conflicts with incremental)\n*    -i  do an incremental build (no "make clobber")\n*    -l  do "make lint" in \$LINTDIRS (default: "\$SRC y")\n*    -m  send mail to \$MAILTO at end of build\n*    -n  do not do a bringover (aka. pull or clone) from the parent\n*    -p  create packages for PIT/RE\n*    -r  check ELF runtime attributes in the proto area\n*    -t  build and use the tools in \$SRC/tools (default setting)\n*    +t  Use the build tools in \$ONBLD_TOOLS/bin\n*    -u  update proto_list_\$MACH and friends in the parent workspace; when used with -f, also build an unrefmaster.out in the parent\n*    -w  report on differences between previous and current proto areas', name: 'BUILDOPT_NIGHTLY_OPTIONS')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to only produce non-debug binaries of the project', name: 'action_BuildNonDebug')
+        string(defaultValue: '-nt', description: 'The alternate nightly.sh option flags for the illumos-gate to produce debug binaries of the project (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_BLDNONDEBUG')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to produce debug binaries of the project', name: 'action_BuildDebug')
+        string(defaultValue: '-ntFD', description: 'The alternate nightly.sh option flags for the illumos-gate to produce non-debug binaries of the project (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_BLDDEBUG')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to produce packages of the project (at least one variant should have been built beforehand)', name: 'action_BuildPackages')
+        string(defaultValue: '-np', description: 'The alternate nightly.sh option flags for the illumos-gate to produce a local-FS repo with packages of the project (if selected) from previously built binaries', name: 'BUILDOPT_NIGHTLY_OPTIONS_BLDPKG')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to only "make check" the project (and do some related activities)', name: 'action_Check')
+        string(defaultValue: '-nCAFir', description: 'The alternate nightly.sh option flags for the illumos-gate post-build checks (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_CHECK')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to only "lint" the project (and do some related activities)', name: 'action_Lint')
+        string(defaultValue: '-nl', description: 'The alternate nightly.sh option flags for the illumos-gate post-build linting (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_LINT')
+        booleanParam(defaultValue: false, description: 'Enable publishing of local IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
         string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
@@ -152,19 +160,21 @@ fi
                 }
             }
         }
-        stage("WORKSPACE:BUILD") {
+
+        stage("WORKSPACE:BUILD-ALL") {
             environment {
                 str_option_BuildIncremental = params["option_BuildIncremental"] ? "-i" : ""
             }
             when {
-                params["action_Build"] == true
+                params["action_BuildAll"] == true
             }
             steps {
                 dir("${env.WORKSPACE}") {
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
-echo 'STARTING ILLUMOS-GATE BUILD (prepare to wait... a lot... and in silence!)';
+echo 'STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
+egrep '[^#].*export NIGHTLY_OPTIONS=' illumos.sh;
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
@@ -182,10 +192,122 @@ exit \$RES;
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
                         }
-                    } /* TODO: Just archive this, at least the big log? */
+                    }
                 }
             }
         }
+
+        stage("WORKSPACE:BUILD_ND") {
+            when {
+                params["action_BuildNonDebug"] == true
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
+tmpscript="./illumos-once-nd.\$\$.sh"
+cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
+echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDNONDEBUG}"' >> "\$tmpscript" || exit;
+echo 'STARTING ILLUMOS-GATE BUILD NON-DEBUG ONLY (prepare to wait... a lot... and in silence!)';
+egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+CCACHE_BASEDIR="`pwd`" \\
+time ./nightly.sh "\$tmpscript"; RES=\$?;
+[ "\$RES" = 0 ] || echo "BUILD NON-DEBUG FAILED (code \$RES), see more details in its logs";
+rm -f "\$tmpscript";
+exit \$RES;
+"""
+                }
+            }
+            post {
+                always {
+                    dir("${env.WORKSPACE}") {
+                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        script {
+                            def fileToArchive = readFile 'logs_to_archive.txt'
+                            archive fileToArchive
+                            sh 'rm -f logs_to_archive.txt'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("WORKSPACE:BUILD_DEBUG") {
+            when {
+                params["action_BuildDebug"] == true
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
+tmpscript="./illumos-once-debug.\$\$.sh"
+cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
+echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDDEBUG}"' >> "\$tmpscript" || exit;
+echo 'STARTING ILLUMOS-GATE BUILD DEBUG ONLY (prepare to wait... a lot... and in silence!)';
+egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+CCACHE_BASEDIR="`pwd`" \\
+time ./nightly.sh "\$tmpscript"; RES=\$?;
+[ "\$RES" = 0 ] || echo "BUILD DEBUG FAILED (code \$RES), see more details in its logs";
+rm -f "\$tmpscript";
+exit \$RES;
+"""
+                }
+            }
+            post {
+                always {
+                    dir("${env.WORKSPACE}") {
+                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        script {
+                            def fileToArchive = readFile 'logs_to_archive.txt'
+                            archive fileToArchive
+                            sh 'rm -f logs_to_archive.txt'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("WORKSPACE:BUILD_PKG") {
+            when {
+                params["action_BuildPackages"] == true
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
+tmpscript="./illumos-once-pkg.\$\$.sh"
+cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
+echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDPKG}"' >> "\$tmpscript" || exit;
+echo 'STARTING ILLUMOS-GATE BUILD PACKAGES ONLY (prepare to wait... a lot... and in silence!)';
+egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+CCACHE_BASEDIR="`pwd`" \\
+time ./nightly.sh "\$tmpscript"; RES=\$?;
+[ "\$RES" = 0 ] || echo "BUILD PACKAGES FAILED (code \$RES), see more details in its logs";
+rm -f "\$tmpscript";
+exit \$RES;
+"""
+                }
+            }
+            post {
+                always {
+                    dir("${env.WORKSPACE}") {
+                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        script {
+                            def fileToArchive = readFile 'logs_to_archive.txt'
+                            archive fileToArchive
+                            sh 'rm -f logs_to_archive.txt'
+                        }
+                    }
+                }
+            }
+        }
+
         stage("WORKSPACE:CHECK") {
             when {
                 params["action_Check"] == true
@@ -200,6 +322,7 @@ exit \$RES;
 cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./illumos-once.sh || exit;
 echo 'STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
+egrep '[^#].*export NIGHTLY_OPTIONS=' illumos-once.sh;
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh illumos-once.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
@@ -218,10 +341,48 @@ exit \$RES;
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
                         }
-                    } /* TODO: Just archive this, at least the big log? */
+                    }
                 }
             }
         }
+
+        stage("WORKSPACE:LINT") {
+            when {
+                params["action_Lint"] == true
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
+tmpscript="./illumos-once-lint.\$\$.sh"
+cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
+echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_LINT}"' >> "\$tmpscript" || exit;
+echo 'STARTING ILLUMOS-GATE LINTING ONLY (prepare to wait... a lot... and in silence!)';
+egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+CCACHE_BASEDIR="`pwd`" \\
+time ./nightly.sh "\$tmpscript"; RES=\$?;
+[ "\$RES" = 0 ] || echo "LINTING FAILED (code \$RES), see more details in its logs";
+rm -f "\$tmpscript";
+exit \$RES;
+"""
+                }
+            }
+            post {
+                always {
+                    dir("${env.WORKSPACE}") {
+                        sh 'echo "LINT BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
+                        sh 'echo "ARCHIVE LINT BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        script {
+                            def fileToArchive = readFile 'logs_to_archive.txt'
+                            archive fileToArchive
+                            sh 'rm -f logs_to_archive.txt'
+                        }
+                    }
+                }
+            }
+        }
+
         stage("WORKSPACE:PUBLISH_IPS") {
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
