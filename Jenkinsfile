@@ -179,7 +179,8 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
-                            archive logs_to_archive.txt
+                            archive fileToArchive
+                            sh 'rm -f logs_to_archive.txt'
                         }
                     } /* TODO: Just archive this, at least the big log? */
                 }
@@ -213,7 +214,7 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
-                            archive logs_to_archive.txt
+                            archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
                         }
                     } /* TODO: Just archive this, at least the big log? */
