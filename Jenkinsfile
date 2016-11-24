@@ -196,7 +196,7 @@ exit \$RES;
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
 . ./illumos.sh ;
-CCACHE_BASEDIR="`pwd`" make check';
+CCACHE_BASEDIR="`pwd`" make check;
 """
                 }
             }
