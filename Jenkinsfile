@@ -34,7 +34,7 @@ pipeline {
         booleanParam(defaultValue: true,  description: 'Run Git to checkout or update the project sources', name: 'action_DoSCM')
         booleanParam(defaultValue: true,  description: 'Recreate "illumos.sh" with settings for the next build run', name: 'action_PrepIllumos')
         booleanParam(defaultValue: true,  description: 'Run "nightly" script to update or rebuild the project (depending on other settings)', name: 'action_Build')
-        booleanParam(defaultValue: false, description: 'Run "nightly" script to update the project in incremental mode', name: 'option_BuildIncremental')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to update the project in incremental mode (overrides and disables clobber, lint, check)', name: 'option_BuildIncremental')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to "make check" the project (as a separate step, may be redundant with "m" in NIGHTLY_OPTIONS)', name: 'action_Check')
         booleanParam(defaultValue: false, description: 'Enable publishing IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
@@ -195,8 +195,12 @@ exit \$RES;
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
-. ./illumos.sh ;
-CCACHE_BASEDIR="`pwd`" make check;
+cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
+echo 'NIGHTLY_OPTIONS="-CA"' >> ./illumos-once.sh || exit;
+echo 'STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
+time ./nightly.sh illumos.sh; RES=\$?;
+[ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
+exit \$RES;
 """
                 }
             }
