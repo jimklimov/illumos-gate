@@ -164,8 +164,8 @@ fi
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
-export CCACHE_BASEDIR="`pwd`";
 echo 'STARTING ILLUMOS-GATE BUILD (prepare to wait... a lot... and in silence!)';
+CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
 exit \$RES;
@@ -200,6 +200,7 @@ exit \$RES;
 cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./illumos-once.sh || exit;
 echo 'STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
+CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh illumos-once.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
 rm -f illumos-once.sh;
