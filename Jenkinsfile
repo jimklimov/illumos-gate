@@ -67,7 +67,9 @@ pipeline {
             }
             steps {
                 echo "Removing '${env.WORKSPACE}' at '${env.NODE_NAME}'"
-                deleteDir()
+                dir("${env.WORKSPACE}") {
+                    deleteDir()
+                }
             }
         }
         stage("WORKSPACE:GITWIPE") {
@@ -80,14 +82,18 @@ pipeline {
                 return false;
             }
             steps {
-                echo "Git-cleaning '${env.WORKSPACE}' at '${env.NODE_NAME}'"
-                sh 'git checkout -f'
-                sh 'git clean -d -ff -x'
+                dir("${env.WORKSPACE}") {
+                    echo "Git-cleaning '${env.WORKSPACE}' at '${env.NODE_NAME}'"
+                    sh 'git checkout -f'
+                    sh 'git clean -d -ff -x'
+                }
             }
             post {
                 failure {
                     echo "ERROR: Git clean failed in '${env.WORKSPACE}' at '${env.NODE_NAME}', removing workspace completely"
-                    deleteDir()
+                    dir("${env.WORKSPACE}") {
+                        deleteDir()
+                    }
                 }
             }
         }
@@ -109,7 +115,8 @@ pipeline {
             }
             steps {
 /* TODO: Download closed bins from the internet by default/fallback? */
-                sh """
+                dir("${env.WORKSPACE}") {
+                    sh """
 sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIONS}",' \\
     -e 's,^\\(export ON_CLOSED_BINS=\\).*\$,\\1"${params.BUILDOPT_ON_CLOSED_BINS}",' \\
     -e 's,^\\(export ENABLE_IPP_PRINTING=\\),### \\1,' \\
@@ -137,6 +144,7 @@ if [ "${str_option_UseCCACHE}" = "true" ] && [ -x "/usr/bin/ccache" ]; then
     echo 'export CW_GCC_DIR="\$GCC_ROOT/bin"' >> ./illumos.sh || exit
 fi
 """
+                }
             }
         }
         stage("WORKSPACE:BUILD") {
@@ -147,20 +155,24 @@ fi
                 params["action_Build"] == true
             }
             steps {
-                sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
-                sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
-                sh """
+                dir("${env.WORKSPACE}") {
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
 export CCACHE_BASEDIR="`pwd`";
 echo 'STARTING ILLUMOS-GATE BUILD (prepare to wait... a lot... and in silence!)';
 time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
 exit \$RES;
 """
+                }
             }
             post {
                 always {
-                    sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.* | tail -1`/mail_msg"'
-                    // sh 'echo "BUILD LOG - LONG:";  cat "`ls -1d log/log.* | tail -1`/nightly.log"'
+                    dir("${env.WORKSPACE}") {
+                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.* | tail -1`/mail_msg"'
+                        // sh 'echo "BUILD LOG - LONG:";  cat "`ls -1d log/log.* | tail -1`/nightly.log"'
+                    } /* TODO: Just archive this, at least the big log? */
                 }
             }
         }
@@ -169,8 +181,10 @@ exit \$RES;
                 params["action_Check"] == true
             }
             steps {
-                echo "Checking the build results in '${env.WORKSPACE}/${params.REL_BUILDDIR}' at '${env.NODE_NAME}'"
-                sh '. illumos.sh ; CCACHE_BASEDIR="`pwd`" make check '
+                dir("${env.WORKSPACE}") {
+                    echo "Checking the build results in '${env.WORKSPACE}' at '${env.NODE_NAME}'"
+                    sh '. illumos.sh ; CCACHE_BASEDIR="`pwd`" make check '
+                }
             }
         }
         stage("WORKSPACE:PUBLISH_IPS") {
@@ -179,8 +193,10 @@ exit \$RES;
                 params["action_PublishIPS"] == true
             }
             steps {
-                echo "Publishing IPS packages from '${env.WORKSPACE}/${params.REL_BUILDDIR}' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
-                echo 'TODO: No-op yet'
+                dir("${env.WORKSPACE}") {
+                    echo "Publishing IPS packages from '${env.WORKSPACE}' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
+                    echo 'TODO: No-op yet'
+                }
             }
         }
     }
