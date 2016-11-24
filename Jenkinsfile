@@ -39,6 +39,7 @@ pipeline {
         booleanParam(defaultValue: false, description: 'Enable publishing IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
         string(defaultValue: '-nCDAlmprt', description: 'The nightly.sh option flags for the illumos-gate build (gate default is -FnCDAlmprt), including the leading dash:\n* DEBUG build only (-D, -F) or DEBUG and non-DEBUG builds (just -D)\n* do not bringover (aka. pull or clone) from the parent (-n)\n* runs "make check" (-C)\n* checks for new interfaces in libraries (-A)\n* runs lint in usr/src (-l plus the LINTDIRS variable)\n* sends mail on completion (-m and the MAILTO variable)\n* creates packages for PIT/RE (-p)\n* checks for changes in ELF runpaths (-r)\n* build and use this workspaces tools in $SRC/tools (-t)', name: 'BUILDOPT_NIGHTLY_OPTIONS')
+        string(defaultValue: '-nCAFifr', description: 'The alternate nightly.sh option flags for the illumos-gate post-build checks (if action_Check is selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_CHECK')
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
         string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
         booleanParam(defaultValue: true, description: 'Use CCACHE (if available) to wrap around the GCC compiler', name: 'option_UseCCACHE')
@@ -196,10 +197,11 @@ exit \$RES;
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
 cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
-echo 'NIGHTLY_OPTIONS="-CA"' >> ./illumos-once.sh || exit;
+echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./illumos-once.sh || exit;
 echo 'STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
-time ./nightly.sh illumos.sh; RES=\$?;
+time ./nightly.sh illumos-once.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
+rm -f illumos-once.sh;
 exit \$RES;
 """
                 }
