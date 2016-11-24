@@ -212,6 +212,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive logs_to_archive.txt
+                            sh 'rm -f logs_to_archive.txt'
                         }
                     } /* TODO: Just archive this, at least the big log? */
                 }
