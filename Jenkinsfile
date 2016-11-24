@@ -125,7 +125,7 @@ sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIO
 && chmod +x illumos.sh || exit
 
 [ -n "${env._ESC_CPP}" ] && [ -x "${env._ESC_CPP}" ] && \\
-    echo 'export _ESC_CPP="${env._ESC_CPP}"' >> ./illumos.sh
+    { echo 'export _ESC_CPP="${env._ESC_CPP}"' >> ./illumos.sh || exit ; }
 
 if [ -n "${params.BUILDOPT_PERL_VERSION}" ]; then \\
     [ -d "/usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin" ] || echo "WARNING: Can not find a PERL home at /usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin; will try this version as asked anyways, but the build can fail" >&2
@@ -183,7 +183,8 @@ exit \$RES;
             steps {
                 dir("${env.WORKSPACE}") {
                     echo "Checking the build results in '${env.WORKSPACE}' at '${env.NODE_NAME}'"
-                    sh '. illumos.sh ; CCACHE_BASEDIR="`pwd`" make check '
+                    /* Note: Can this require a specific "make" dialect interpreter? */
+                    sh '. illumos.sh ; CCACHE_BASEDIR="`pwd`" make check'
                 }
             }
         }
