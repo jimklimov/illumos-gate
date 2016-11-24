@@ -119,10 +119,14 @@ pipeline {
                     sh """
 sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIONS}",' \\
     -e 's,^\\(export ON_CLOSED_BINS=\\).*\$,\\1"${params.BUILDOPT_ON_CLOSED_BINS}",' \\
-    -e 's,^\\(export ENABLE_IPP_PRINTING=\\),### \\1,' \\
-    -e 's,^\\(export ENABLE_SMB_PRINTING=\\),### \\1,' \\
 < ./usr/src/tools/env/illumos.sh > ./illumos.sh \\
 && chmod +x illumos.sh || exit
+
+grep -i omnios /etc/release && \\
+sed \\
+    -e 's,^\\(export ENABLE_IPP_PRINTING=\\),### \\1,' \\
+    -e 's,^\\(export ENABLE_SMB_PRINTING=\\),### \\1,' \\
+    -i illumos.sh
 
 [ -n "${env._ESC_CPP}" ] && [ -x "${env._ESC_CPP}" ] && \\
     { echo 'export _ESC_CPP="${env._ESC_CPP}"' >> ./illumos.sh || exit ; }
@@ -170,8 +174,12 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.* | tail -1`/mail_msg"'
-                        // sh 'echo "BUILD LOG - LONG:";  cat "`ls -1d log/log.* | tail -1`/nightly.log"'
+                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        script {
+                            def fileToArchive = readFile 'logs_to_archive.txt'
+                            archive logs_to_archive.txt
+                        }
                     } /* TODO: Just archive this, at least the big log? */
                 }
             }
@@ -184,7 +192,12 @@ exit \$RES;
                 dir("${env.WORKSPACE}") {
                     echo "Checking the build results in '${env.WORKSPACE}' at '${env.NODE_NAME}'"
                     /* Note: Can this require a specific "make" dialect interpreter? */
-                    sh '. illumos.sh ; CCACHE_BASEDIR="`pwd`" make check'
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
+. ./illumos.sh ;
+CCACHE_BASEDIR="`pwd`" make check';
+"""
                 }
             }
         }
