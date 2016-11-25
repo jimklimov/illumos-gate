@@ -175,7 +175,7 @@ fi
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
 echo 'STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
-egrep '[^#].*export NIGHTLY_OPTIONS=' illumos.sh;
+egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
@@ -211,7 +211,7 @@ tmpscript="./illumos-once-nd.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDNONDEBUG}"' >> "\$tmpscript" || exit;
 echo 'STARTING ILLUMOS-GATE BUILD NON-DEBUG ONLY (prepare to wait... a lot... and in silence!)';
-egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD NON-DEBUG FAILED (code \$RES), see more details in its logs";
@@ -248,7 +248,7 @@ tmpscript="./illumos-once-debug.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDDEBUG}"' >> "\$tmpscript" || exit;
 echo 'STARTING ILLUMOS-GATE BUILD DEBUG ONLY (prepare to wait... a lot... and in silence!)';
-egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD DEBUG FAILED (code \$RES), see more details in its logs";
@@ -285,7 +285,7 @@ tmpscript="./illumos-once-pkg.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDPKG}"' >> "\$tmpscript" || exit;
 echo 'STARTING ILLUMOS-GATE BUILD PACKAGES ONLY (prepare to wait... a lot... and in silence!)';
-egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD PACKAGES FAILED (code \$RES), see more details in its logs";
@@ -323,7 +323,7 @@ exit \$RES;
 cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./illumos-once.sh || exit;
 echo 'STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
-egrep '[^#].*export NIGHTLY_OPTIONS=' illumos-once.sh;
+egrep '[^#]*export NIGHTLY_OPTIONS=' illumos-once.sh;
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh illumos-once.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
@@ -360,7 +360,7 @@ tmpscript="./illumos-once-lint.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_LINT}"' >> "\$tmpscript" || exit;
 echo 'STARTING ILLUMOS-GATE LINTING ONLY (prepare to wait... a lot... and in silence!)';
-egrep '[^#].*export NIGHTLY_OPTIONS=' "\$tmpscript";
+egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
 [ "\$RES" = 0 ] || echo "LINTING FAILED (code \$RES), see more details in its logs";
