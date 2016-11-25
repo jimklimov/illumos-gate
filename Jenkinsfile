@@ -174,7 +174,7 @@ fi
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
-echo 'STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
+echo '`date -u`: STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
@@ -210,7 +210,7 @@ exit \$RES;
 tmpscript="./illumos-once-nd.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDNONDEBUG}"' >> "\$tmpscript" || exit;
-echo 'STARTING ILLUMOS-GATE BUILD NON-DEBUG ONLY (prepare to wait... a lot... and in silence!)';
+echo '`date -u`: STARTING ILLUMOS-GATE BUILD NON-DEBUG ONLY (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
@@ -247,7 +247,7 @@ exit \$RES;
 tmpscript="./illumos-once-debug.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDDEBUG}"' >> "\$tmpscript" || exit;
-echo 'STARTING ILLUMOS-GATE BUILD DEBUG ONLY (prepare to wait... a lot... and in silence!)';
+echo '`date -u`: STARTING ILLUMOS-GATE BUILD DEBUG ONLY (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
@@ -284,7 +284,7 @@ exit \$RES;
 tmpscript="./illumos-once-pkg.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_BLDPKG}"' >> "\$tmpscript" || exit;
-echo 'STARTING ILLUMOS-GATE BUILD PACKAGES ONLY (prepare to wait... a lot... and in silence!)';
+echo '`date -u`: STARTING ILLUMOS-GATE BUILD PACKAGES ONLY (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
@@ -322,7 +322,7 @@ exit \$RES;
                     sh """
 cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./illumos-once.sh || exit;
-echo 'STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
+echo '`date -u`: STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos-once.sh;
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh illumos-once.sh; RES=\$?;
@@ -359,7 +359,7 @@ exit \$RES;
 tmpscript="./illumos-once-lint.\$\$.sh"
 cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
 echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_LINT}"' >> "\$tmpscript" || exit;
-echo 'STARTING ILLUMOS-GATE LINTING ONLY (prepare to wait... a lot... and in silence!)';
+echo '`date -u`: STARTING ILLUMOS-GATE LINTING ONLY (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh "\$tmpscript"; RES=\$?;
