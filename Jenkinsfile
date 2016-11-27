@@ -384,14 +384,36 @@ exit \$RES;
             }
         }
 
-        stage("WORKSPACE:PUBLISH_IPS") {
+        stage("WORKSPACE:PUBLISH_IPS-NON_DEBUG:i386") {
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
-                params["action_PublishIPS"] == true
+                if (params["action_PublishIPS"] == true) {
+                    if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache")) {
+                        return true;
+                    }
+                }
+                return false;
             }
             steps {
                 dir("${env.WORKSPACE}") {
-                    echo "Publishing IPS packages from '${env.WORKSPACE}' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
+                    echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
+                    echo 'TODO: No-op yet'
+                }
+            }
+        }
+        stage("WORKSPACE:PUBLISH_IPS_DEBUG:i386") {
+            when {
+/* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
+                if (params["action_PublishIPS"] == true) {
+                    if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache")) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
                     echo 'TODO: No-op yet'
                 }
             }
