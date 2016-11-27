@@ -2,7 +2,7 @@
 /*
  * This is a Jenkinsfile to automate Jenkins CI builds of illumos-gate
  * as code updates come into its repo (including posted pull requests)
- * and pass the routine with CCACHE to speed this up.
+ * and pass the routine with CCACHE to speed up the compilation steps (D/ND).
  *
  * This file and its contents are supplied under the terms of the
  * Common Development and Distribution License ("CDDL"). You may
@@ -34,7 +34,7 @@ pipeline {
         booleanParam(defaultValue: true,  description: 'Run Git to checkout or update the project sources', name: 'action_DoSCM')
         booleanParam(defaultValue: true,  description: 'Recreate "illumos.sh" with settings for the next build run', name: 'action_PrepIllumos')
         booleanParam(defaultValue: true,  description: 'Run "nightly" script to update or rebuild the project in one big step (depending on other settings)', name: 'action_BuildAll')
-        booleanParam(defaultValue: false, description: 'Run "nightly" script to update the project in incremental mode (overrides and disables clobber, lint, check)', name: 'option_BuildIncremental')
+        booleanParam(defaultValue: false, description: 'Run "nightly" script to update the project in incremental mode (overrides and disables clobber, lint, check)\nNOTE that an increment that has nothing to do can still take an hour to walk the Makefiles!', name: 'option_BuildIncremental')
         string(defaultValue: '-ntCDAlmprf', description: 'The nightly.sh option flags for the illumos-gate build (gate default is -FnCDAlmprt), including the leading dash.\nNon-DEBUG is the default build type. Recognized flags include:\n*    -A  check for ABI differences in .so files\n*    -C  check for cstyle/hdrchk errors\n*    -D  do a build with DEBUG on\n*    -F  do _not_ do a non-DEBUG build\n*    -G  gate keeper default group of options (-au)\n*    -I  integration engineer default group of options (-ampu)\n*    -M  do not run pmodes (safe file permission checker)\n*    -N  do not run protocmp\n*    -R  default group of options for building a release (-mp)\n*    -U  update proto area in the parent\n*    -f  find unreferenced files (requires -lp, conflicts with incremental)\n*    -i  do an incremental build (no "make clobber")\n*    -l  do "make lint" in \$LINTDIRS (default: "\$SRC y")\n*    -m  send mail to \$MAILTO at end of build\n*    -n  do not do a bringover (aka. pull or clone) from the parent\n*    -p  create packages for PIT/RE\n*    -r  check ELF runtime attributes in the proto area\n*    -t  build and use the tools in \$SRC/tools (default setting)\n*    +t  Use the build tools in \$ONBLD_TOOLS/bin\n*    -u  update proto_list_\$MACH and friends in the parent workspace; when used with -f, also build an unrefmaster.out in the parent\n*    -w  report on differences between previous and current proto areas', name: 'BUILDOPT_NIGHTLY_OPTIONS')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to only produce non-debug binaries of the project', name: 'action_BuildNonDebug')
         string(defaultValue: '-nt', description: 'The alternate nightly.sh option flags for the illumos-gate to produce debug binaries of the project (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_BLDNONDEBUG')
@@ -325,7 +325,7 @@ echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./il
 echo '`date -u`: STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos-once.sh;
 CCACHE_BASEDIR="`pwd`" \\
-time ./nightly.sh -i illumos-once.sh; RES=\$?;
+time ./nightly.sh illumos-once.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
 rm -f illumos-once.sh;
 exit \$RES;
