@@ -191,7 +191,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
+                            // sh 'rm -f logs_to_archive.txt'
                         }
                     }
                 }
@@ -228,7 +228,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
+                            // sh 'rm -f logs_to_archive.txt'
                         }
                     }
                 }
@@ -265,7 +265,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
+                            // sh 'rm -f logs_to_archive.txt'
                         }
                     }
                 }
@@ -302,7 +302,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
+                            // sh 'rm -f logs_to_archive.txt'
                         }
                     }
                 }
@@ -340,7 +340,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
+                            // sh 'rm -f logs_to_archive.txt'
                         }
                     }
                 }
@@ -377,7 +377,7 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
+                            // sh 'rm -f logs_to_archive.txt'
                         }
                     }
                 }
