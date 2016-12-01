@@ -198,6 +198,8 @@ exit \$RES;
                             echo fileToArchive
                             echo "${fileToArchive}"
                             archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}"
+                            sh 'ls -la logs_to_archive.txt'
+                            sh "ls -la ${fileToArchive}"
 /*
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
