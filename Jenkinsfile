@@ -192,14 +192,14 @@ exit \$RES;
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
                         sh 'echo "ARCHIVE BUILD LOG REPORT:"; echo "log/nightly.log;`ls -1d log/log.*/ | sort -n | tail -1`/*" > logs_to_archive.txt && cat logs_to_archive.txt'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) | tr "\\n" ";" | sed "s,;\$,\\n," > logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) | tr "\\n" ";" | sed "s,;\$,," > logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive:true, artifacts:fileToArchive
+                            archiveArtifacts allowEmptyArchive:true, artifacts:fileToArchive, name: "BUILD-LOG-A"
                             echo fileToArchive
                             echo "${fileToArchive}"
-                            archiveArtifacts allowEmptyArchive:true, artifacts:"${fileToArchive}"
-                            archive includes:"${fileToArchive}"
+                            archiveArtifacts allowEmptyArchive:true, artifacts:"${fileToArchive}", name: "BUILD-LOG-B"
+                            archive includes:"${fileToArchive}", name: "BUILD-LOG-C"
                             sh 'ls -la logs_to_archive.txt'
                             sh "ls -la `echo '${fileToArchive}' | sed 's/;/ /g'`"
 /*
