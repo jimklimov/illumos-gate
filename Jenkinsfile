@@ -27,6 +27,7 @@ pipeline {
      *   http://wiki.illumos.org/display/illumos/How+To+Build+illumos
      * On some distros you might need to explicitly add 'gcc-4.4.4-il' and/or
      * legacy "closed binaries" as tarballs or distro-maintained packages.
+     * Also pay attention to exact path of GCC you want (dashes, slashes, etc).
      */
     parameters {
         booleanParam(defaultValue: false, description: 'Removes workspace completely before checkout and build', name: 'action_DistcleanRebuild')
@@ -50,7 +51,7 @@ pipeline {
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
 /* TODO: Add a sort of build to just update specifed component(s) like a driver module */
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
-        string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
+        string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.16.1, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
         booleanParam(defaultValue: true, description: 'Use CCACHE (if available) to wrap around the GCC compiler', name: 'option_UseCCACHE')
         string(defaultValue: '\${HOME}/.ccache', description: 'If using CCACHE across nodes, you can use a shared cache directory\nNote that if you access nodes via SSH as the same user account, this account can just have a symlink to a shared location on NFS or have wholly the same home using NFS', name: 'CCACHE_DIR')
         string(defaultValue: '/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin', description: 'If using CCACHE across nodes, these are paths it searches for backend real compilers', name: 'CCACHE_PATH')
@@ -193,8 +194,11 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
+                            archiveArtifacts allowEmptyArchive: true, artifacts: ${fileToArchive}
+/*
                             archive fileToArchive
-                            // sh 'rm -f logs_to_archive.txt'
+                            sh 'rm -f logs_to_archive.txt'
+*/
                         }
                     }
                 }
@@ -230,8 +234,11 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
+/*
                             archive fileToArchive
-                            // sh 'rm -f logs_to_archive.txt'
+                            sh 'rm -f logs_to_archive.txt'
+*/
                         }
                     }
                 }
@@ -267,8 +274,11 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
+/*
                             archive fileToArchive
-                            // sh 'rm -f logs_to_archive.txt'
+                            sh 'rm -f logs_to_archive.txt'
+*/
                         }
                     }
                 }
@@ -304,8 +314,11 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
+/*
                             archive fileToArchive
-                            // sh 'rm -f logs_to_archive.txt'
+                            sh 'rm -f logs_to_archive.txt'
+*/
                         }
                     }
                 }
@@ -342,8 +355,11 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
+/*
                             archive fileToArchive
-                            // sh 'rm -f logs_to_archive.txt'
+                            sh 'rm -f logs_to_archive.txt'
+*/
                         }
                     }
                 }
@@ -379,8 +395,11 @@ exit \$RES;
                         sh 'echo "ARCHIVE LINT BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
+                            archiveArtifacts allowEmptyArchive: true, artifacts: ${fileToArchive}
+/*
                             archive fileToArchive
-                            // sh 'rm -f logs_to_archive.txt'
+                            sh 'rm -f logs_to_archive.txt'
+*/
                         }
                     }
                 }
