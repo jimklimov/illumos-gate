@@ -191,15 +191,15 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; echo "log/nightly.log;`ls -1d log/log.*/ | sort -n | tail -1`/*" > logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
                             echo fileToArchive
                             echo "${fileToArchive}"
                             archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}"
-                            sh 'ls -la logs_to_archive.txt'
-                            sh "ls -la ${fileToArchive}"
+//                            sh 'ls -la logs_to_archive.txt'
+//                            sh "ls -la ${fileToArchive}"
 /*
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
