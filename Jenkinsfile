@@ -396,6 +396,8 @@ exit \$RES;
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
+                            echo fileToArchive
+                            echo "${fileToArchive}"
 /*
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
