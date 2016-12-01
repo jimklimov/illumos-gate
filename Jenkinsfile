@@ -194,7 +194,7 @@ exit \$RES;
                         sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: ${fileToArchive}
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
 /*
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
@@ -395,7 +395,7 @@ exit \$RES;
                         sh 'echo "ARCHIVE LINT BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: ${fileToArchive}
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
 /*
                             archive fileToArchive
                             sh 'rm -f logs_to_archive.txt'
