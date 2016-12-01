@@ -187,7 +187,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
@@ -224,7 +224,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
@@ -261,7 +261,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
@@ -298,7 +298,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
@@ -336,7 +336,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
@@ -373,7 +373,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "LINT BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE LINT BUILD LOG REPORT:"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE LINT BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archive fileToArchive
