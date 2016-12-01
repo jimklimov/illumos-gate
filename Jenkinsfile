@@ -141,6 +141,9 @@ sed \\
 [ -n "${env._ESC_CPP}" ] && [ -x "${env._ESC_CPP}" ] && \\
     { echo 'export _ESC_CPP="${env._ESC_CPP}"' >> ./illumos.sh || exit ; }
 
+sed -e 's,^\\(export CODEMGR_WS=\\).*\$,\\1"${env.WORKSPACE}",' \\
+    -i illumos.sh || exit
+
 if [ -n "${params.BUILDOPT_PERL_VERSION}" ]; then \\
     [ -d "/usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin" ] || echo "WARNING: Can not find a PERL home at /usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin; will try this version as asked anyways, but the build can fail" >&2
     echo "export PERL_VERSION='${params.BUILDOPT_PERL_VERSION}'" >> ./illumos.sh || exit
