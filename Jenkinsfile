@@ -17,7 +17,10 @@
  */
 
 pipeline {
-    agent label:"illumos-gate-builder"
+    agent {
+        label "illumos-gate-builder"
+    }
+
     /*
      * This assumes a zone or server with required illumos-gate building tools
      * For OmniOS you'd need to preinstall 'illumos-tools' per
@@ -47,8 +50,8 @@ pipeline {
         string(defaultValue: '-nCAFir', description: 'The alternate nightly.sh option flags for the illumos-gate post-build checks (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_CHECK')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to only "lint" the project (and do some related activities)', name: 'action_Lint')
         string(defaultValue: '-nl', description: 'The alternate nightly.sh option flags for the illumos-gate post-build linting (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_LINT')
-        booleanParam(defaultValue: false, description: 'Enable publishing of local IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
-        string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages', name: 'URL_IPS_REPO')
+        booleanParam(defaultValue: true, description: 'Enable publishing of local IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
+        string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages (if empty - then decided by branch name)', name: 'URL_IPS_REPO')
 /* TODO: Add a sort of build to just update specifed component(s) like a driver module */
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
         string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.16.1, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
@@ -61,7 +64,7 @@ pipeline {
         CCACHE_DIR="${params.CCACHE_DIR}"
         CCACHE_PATH="${params.CCACHE_PATH}"
     }
-    jobProperties {
+    options {
         buildDiscarder(logRotator(numToKeepStr:'10'))
         disableConcurrentBuilds()
     }
@@ -69,12 +72,14 @@ pipeline {
     stages {
         stage("WORKSPACE:DESTROY") {
             when {
-                if (params["action_DistcleanRebuild"] == true) {
-                    if (fileExists(file: "${env.WORKSPACE}/.git/config")) {
-                        return true;
+                expression {
+                    if (params["action_DistcleanRebuild"] == true) {
+                        if (fileExists(file: "${env.WORKSPACE}/.git/config")) {
+                            return true;
+                        }
                     }
+                    return false;
                 }
-                return false;
             }
             steps {
                 echo "Removing '${env.WORKSPACE}' at '${env.NODE_NAME}'"
@@ -85,12 +90,14 @@ pipeline {
         }
         stage("WORKSPACE:GITWIPE") {
             when {
-                if (params["action_DistcleanRebuild"] == false && params["action_GitcleanRebuild"] == true) {
-                    if (fileExists(file: "${env.WORKSPACE}/.git/config")) {
-                        return true;
+                expression {
+                    if (params["action_DistcleanRebuild"] == false && params["action_GitcleanRebuild"] == true) {
+                        if (fileExists(file: "${env.WORKSPACE}/.git/config")) {
+                            return true;
+                        }
                     }
+                    return false;
                 }
-                return false;
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -110,16 +117,21 @@ pipeline {
         }
         stage("WORKSPACE:CHECKOUT") {
             when {
-                params["action_DoSCM"] == true
+                expression {
+                    return params["action_DoSCM"] == true
+                }
             }
             steps {
                 sh "mkdir -p '${env.WORKSPACE}'"
                 checkout scm
             }
         }
-        stage("WORKSPACE:PREPARE") {
+
+        stage("WORKSPACE:PREPARE-ILLUMOS") {
             when {
-                params["action_PrepIllumos"] == true
+                expression {
+                    return params["action_PrepIllumos"] == true
+                }
             }
             environment {
                 str_option_UseCCACHE = params["option_UseCCACHE"] ? "true" : "false"
@@ -171,7 +183,9 @@ fi
                 str_option_BuildIncremental = params["option_BuildIncremental"] ? "-i" : ""
             }
             when {
-                params["action_BuildAll"] == true
+                expression {
+                    return params["action_BuildAll"] == true
+                }
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -192,7 +206,7 @@ exit \$RES;
                     dir("${env.WORKSPACE}") {
                         sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
                         sh 'echo "ARCHIVE BUILD LOG REPORT:"; echo "log/nightly.log;`ls -1d log/log.*/ | sort -n | tail -1`/*" > logs_to_archive.txt && cat logs_to_archive.txt'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) | tr "\\n" ";" | sed "s,;\$,," > logs_to_archive.txt'
+                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) | tr "\\n" ";" | sed "s,;\$,," > logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archiveArtifacts allowEmptyArchive:true, artifacts:fileToArchive, name: "BUILD-LOG-A"
@@ -214,7 +228,9 @@ exit \$RES;
 
         stage("WORKSPACE:BUILD_ND") {
             when {
-                params["action_BuildNonDebug"] == true
+                expression {
+                    return params["action_BuildNonDebug"] == true
+                }
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -254,7 +270,9 @@ exit \$RES;
 
         stage("WORKSPACE:BUILD_DEBUG") {
             when {
-                params["action_BuildDebug"] == true
+                expression {
+                    return params["action_BuildDebug"] == true
+                }
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -294,7 +312,9 @@ exit \$RES;
 
         stage("WORKSPACE:BUILD_PKG") {
             when {
-                params["action_BuildPackages"] == true
+                expression {
+                    return params["action_BuildPackages"] == true
+                }
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -334,7 +354,9 @@ exit \$RES;
 
         stage("WORKSPACE:CHECK") {
             when {
-                params["action_Check"] == true
+                expression {
+                    return params["action_Check"] == true
+                }
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -375,7 +397,9 @@ exit \$RES;
 
         stage("WORKSPACE:LINT") {
             when {
-                params["action_Lint"] == true
+                expression {
+                    return params["action_Lint"] == true
+                }
             }
             steps {
                 dir("${env.WORKSPACE}") {
@@ -399,7 +423,7 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh 'echo "LINT BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE LINT BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh 'echo "ARCHIVE LINT LOG REPORT:"; echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
                         script {
                             def fileToArchive = readFile 'logs_to_archive.txt'
                             archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
@@ -415,37 +439,89 @@ exit \$RES;
             }
         }
 
-        stage("WORKSPACE:PUBLISH_IPS-NON_DEBUG:i386") {
-            when {
-/* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
-                if (params["action_PublishIPS"] == true) {
-                    if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache")) {
-                        return true;
-                    }
-                }
-                return false;
-            }
+        stage("WORKSPACE:ArchivePackages") {
             steps {
                 dir("${env.WORKSPACE}") {
-                    echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
-                    echo 'TODO: No-op yet'
+                    sh 'echo "OKAY BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
+                    sh 'echo "OKAY ARCHIVE BUILD LOG AND PKGREPO:"; ( echo "log/nightly.log" ; echo "packages/*" ; echo "*.sh"; echo "*.env"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > products_to_archive.txt && cat products_to_archive.txt'
+                    sh 'echo "PACKAGES and PROTO locations under `pwd` :"; ls -la packages/*/* proto/*/* || true'
+                    sh """
+tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat products_to_archive-csv.txt
+"""
+                    script {
+                            def fileToArchive = readFile 'products_to_archive-csv.txt'
+                            echo fileToArchive
+                            echo "${fileToArchive}"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive, fingerprint: true
+                            archive includes:fileToArchive
+                            archive includes:"log/*,packages/*,*.sh,*.env"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "log/*,packages/*,*.sh,*.env"
+                    }
                 }
             }
         }
-        stage("WORKSPACE:PUBLISH_IPS_DEBUG:i386") {
+
+        stage("WORKSPACE:PUBLISH_IPS-NON_DEBUG:i386") {
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
-                if (params["action_PublishIPS"] == true) {
-                    if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache")) {
-                        return true;
+                expression {
+                    def URL_IPS_REPO = params["URL_IPS_REPO"];
+                    if (params["URL_IPS_REPO"] == "") {
+                        if (env["BRANCH"] == "master") {
+                            URL_IPS_REPO = "/export/ips/pkg";
+                        } else {
+                            if (env["BRANCH"] == "bugfix") {
+                                URL_IPS_REPO = "/export/ips/bugfix";
+                            } else {
+                                URL_IPS_REPO = "/export/ips/pr";
+                            }
+                        }
                     }
+                    if (params["action_PublishIPS"] == true) {
+                        if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache")) {
+                            return true;
+                        }
+                        echo "WARNING: Can not publish resulting packages because '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache' is missing"
+                    }
+                    return false;
                 }
-                return false;
             }
             steps {
                 dir("${env.WORKSPACE}") {
-                    echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${env.URL_IPS_REPO}'"
-                    echo 'TODO: No-op yet'
+                    echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
+                    sh 'pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO}"'
+                }
+            }
+        }
+        stage("WORKSPACE:PUBLISH_IPS-DEBUG:i386") {
+            when {
+/* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
+                expression {
+                    def URL_IPS_REPO = params["URL_IPS_REPO"];
+                    if (params["URL_IPS_REPO"] == "") {
+                        if (env["BRANCH"] == "master") {
+                            URL_IPS_REPO = "/export/ips/pkg-debug";
+                        } else {
+                            if (env["BRANCH"] == "bugfix") {
+                                URL_IPS_REPO = "/export/ips/bugfix-debug";
+                            } else {
+                                URL_IPS_REPO = "/export/ips/pr-debug";
+                            }
+                        }
+                    }
+                    if (params["action_PublishIPS"] == true) {
+                        if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache")) {
+                            return true;
+                        }
+                        echo "WARNING: Can not publish resulting packages because '${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache' is missing"
+                    }
+                    return false;
+                }
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
+                    sh 'pkgcopy "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" "${URL_IPS_REPO}"'
                 }
             }
         }
