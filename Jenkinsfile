@@ -184,7 +184,7 @@ fi
         stage("WORKSPACE:BUILD-ALL") {
             environment {
                 str_option_BuildIncremental = params["option_BuildIncremental"] ? "-i" : "";
-                str_nametag = "build-all" + ( params["option_BuildIncremental"] ? "-incremental" : "" );
+                str_nametag = "build-all" + ( params["option_BuildIncremental"] ? "-incremental" : "-full" );
             }
             when {
                 expression {
