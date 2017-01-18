@@ -157,6 +157,9 @@ sed \\
 sed -e 's,^\\(export CODEMGR_WS=\\).*\$,\\1"${env.WORKSPACE}",' \\
     -i illumos.sh || exit
 
+sed -e 's,^\\(export PKGARCHIVE=\\).*\$,export PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly",' \\
+    -i illumos.sh || exit
+
 if [ -n "${params.BUILDOPT_PERL_VERSION}" ]; then \\
     [ -d "/usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin" ] || echo "WARNING: Can not find a PERL home at /usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin; will try this version as asked anyways, but the build can fail" >&2
     echo "export PERL_VERSION='${params.BUILDOPT_PERL_VERSION}'" >> ./illumos.sh || exit
@@ -180,7 +183,8 @@ fi
 
         stage("WORKSPACE:BUILD-ALL") {
             environment {
-                str_option_BuildIncremental = params["option_BuildIncremental"] ? "-i" : ""
+                str_option_BuildIncremental = params["option_BuildIncremental"] ? "-i" : "";
+                str_nametag = "build-all" + ( params["option_BuildIncremental"] ? "-incremental" : "" );
             }
             when {
                 expression {
@@ -204,22 +208,14 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; echo "log/nightly.log;`ls -1d log/log.*/ | sort -n | tail -1`/*" > logs_to_archive.txt && cat logs_to_archive.txt'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) | tr "\\n" ";" | sed "s,;\$,," > logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
                         script {
-                            def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive:true, artifacts:fileToArchive, name: "BUILD-LOG-A"
-                            echo fileToArchive
-                            echo "${fileToArchive}"
-                            archiveArtifacts allowEmptyArchive:true, artifacts:"${fileToArchive}", name: "BUILD-LOG-B"
-                            archive includes:"${fileToArchive}", name: "BUILD-LOG-C"
-                            sh 'ls -la logs_to_archive.txt'
-                            sh "ls -la `echo '${fileToArchive}' | sed 's/;/ /g'`"
-/*
-                            archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
-*/
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
                         }
                     }
                 }
@@ -227,6 +223,9 @@ exit \$RES;
         }
 
         stage("WORKSPACE:BUILD_ND") {
+            environment {
+                str_nametag = "build-non_debug";
+            }
             when {
                 expression {
                     return params["action_BuildNonDebug"] == true
@@ -253,15 +252,14 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
                         script {
-                            def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
-/*
-                            archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
-*/
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
                         }
                     }
                 }
@@ -269,6 +267,9 @@ exit \$RES;
         }
 
         stage("WORKSPACE:BUILD_DEBUG") {
+            environment {
+                str_nametag = "build-debug";
+            }
             when {
                 expression {
                     return params["action_BuildDebug"] == true
@@ -295,15 +296,14 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
                         script {
-                            def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
-/*
-                            archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
-*/
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
                         }
                     }
                 }
@@ -311,6 +311,9 @@ exit \$RES;
         }
 
         stage("WORKSPACE:BUILD_PKG") {
+            environment {
+                str_nametag = "build-pkg";
+            }
             when {
                 expression {
                     return params["action_BuildPackages"] == true
@@ -337,15 +340,14 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
                         script {
-                            def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
-/*
-                            archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
-*/
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
                         }
                     }
                 }
@@ -353,6 +355,9 @@ exit \$RES;
         }
 
         stage("WORKSPACE:CHECK") {
+            environment {
+                str_nametag = "check";
+            }
             when {
                 expression {
                     return params["action_Check"] == true
@@ -365,14 +370,15 @@ exit \$RES;
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
-cp ./illumos.sh ./illumos-once.sh && chmod +x ./illumos-once.sh || exit;
-echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> ./illumos-once.sh || exit;
+tmpscript="./illumos-once-check.\$\$.sh"
+cp ./illumos.sh "\$tmpscript" && chmod +x "\$tmpscript" || exit;
+echo 'export NIGHTLY_OPTIONS="${params.BUILDOPT_NIGHTLY_OPTIONS_CHECK}"' >> "\$tmpscript" || exit;
 echo '`date -u`: STARTING ILLUMOS-GATE CHECK (prepare to wait... a lot... and in silence!)';
-egrep '[^#]*export NIGHTLY_OPTIONS=' illumos-once.sh;
+egrep '[^#]*export NIGHTLY_OPTIONS=' "\$tmpscript";
 CCACHE_BASEDIR="`pwd`" \\
-time ./nightly.sh illumos-once.sh; RES=\$?;
+time ./nightly.sh "\$tmpscript"; RES=\$?;
 [ "\$RES" = 0 ] || echo "CHECK FAILED (code \$RES), see more details in its logs";
-rm -f illumos-once.sh;
+rm -f "\$tmpscript";
 exit \$RES;
 """
                 }
@@ -380,15 +386,14 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE BUILD LOG REPORT:";echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
                         script {
-                            def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
-/*
-                            archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
-*/
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
                         }
                     }
                 }
@@ -396,6 +401,9 @@ exit \$RES;
         }
 
         stage("WORKSPACE:LINT") {
+            environment {
+                str_nametag = "lint";
+            }
             when {
                 expression {
                     return params["action_Lint"] == true
@@ -422,17 +430,14 @@ exit \$RES;
             post {
                 always {
                     dir("${env.WORKSPACE}") {
-                        sh 'echo "LINT BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                        sh 'echo "ARCHIVE LINT LOG REPORT:"; echo "log/nightly.log" > logs_to_archive.txt && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f >> logs_to_archive.txt && cat logs_to_archive.txt'
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
                         script {
-                            def fileToArchive = readFile 'logs_to_archive.txt'
-                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive
-                            echo fileToArchive
-                            echo "${fileToArchive}"
-/*
-                            archive fileToArchive
-                            sh 'rm -f logs_to_archive.txt'
-*/
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
                         }
                     }
                 }
@@ -442,30 +447,35 @@ exit \$RES;
         stage("WORKSPACE:ArchivePackages") {
             steps {
                 dir("${env.WORKSPACE}") {
-                    sh 'echo "OKAY BUILD LOG - SHORT:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"'
-                    sh 'echo "OKAY ARCHIVE BUILD LOG AND PKGREPO:"; ( echo "log/nightly.log" ; echo "packages/*" ; echo "*.sh"; echo "*.env"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > products_to_archive.txt && cat products_to_archive.txt'
-                    sh 'echo "PACKAGES and PROTO locations under `pwd` :"; ls -la packages/*/* proto/*/* || true'
                     sh """
+echo "PACKAGES and PROTO locations under `pwd` :"; ( ls -lad packages/*/* ; ls -lad proto/*/* ; ) || true
+echo "ARCHIVE RECENT BUILD LOG AND PKGREPO:"; ( echo "log/nightly.log" ; echo "packages/" ; echo "*.sh"; echo "*.env"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > products_to_archive.txt
 tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat products_to_archive-csv.txt
 """
                     script {
                             def fileToArchive = readFile 'products_to_archive-csv.txt'
-                            echo fileToArchive
-                            echo "${fileToArchive}"
-                            archiveArtifacts allowEmptyArchive: true, artifacts: fileToArchive, fingerprint: true
-                            archive includes:fileToArchive
-                            archive includes:"log/*,packages/*,*.sh,*.env"
-                            archiveArtifacts allowEmptyArchive: true, artifacts: "log/*,packages/*,*.sh,*.env"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveProducts"
                     }
                 }
             }
         }
 
+/* NOTE: These publish steps might be moot on a build zone, and instead
+ * the job scheduler would have the builder archive the package area and
+ * run the publishig activities on a worker with appropriate networking
+ * or filesystem access. But this depends on deployment (and we have the
+ * toggle build parameter here) */
+
         stage("WORKSPACE:PUBLISH_IPS-NON_DEBUG:i386") {
+            environment {
+                URL_IPS_REPO = params["URL_IPS_REPO"];
+                str_nametag = "publish-non_debug";
+            }
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
+/* TODO: Default target repos should be networked, to avoid FS security issues */
+/* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
-                    def URL_IPS_REPO = params["URL_IPS_REPO"];
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/pkg";
@@ -481,7 +491,7 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
                         if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache")) {
                             return true;
                         }
-                        echo "WARNING: Can not publish resulting packages because '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache' is missing"
+                        echo "WARNING: Can not publish resulting packages to ${URL_IPS_REPO} because '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/cfg_cache' is missing"
                     }
                     return false;
                 }
@@ -489,15 +499,23 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
             steps {
                 dir("${env.WORKSPACE}") {
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
-                    sh 'pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO}"'
+                    sh """
+pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO}"
+"""
                 }
             }
         }
+
         stage("WORKSPACE:PUBLISH_IPS-DEBUG:i386") {
+            environment {
+                URL_IPS_REPO = params["URL_IPS_REPO"];
+                str_nametag = "publish-debug";
+            }
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
+/* TODO: Default target repos should be networked, to avoid FS security issues */
+/* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
-                    def URL_IPS_REPO = params["URL_IPS_REPO"];
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/pkg-debug";
@@ -513,7 +531,7 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
                         if (fileExists(file: "${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache")) {
                             return true;
                         }
-                        echo "WARNING: Can not publish resulting packages because '${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache' is missing"
+                        echo "WARNING: Can not publish resulting packages to ${URL_IPS_REPO} because '${env.WORKSPACE}/packages/i386/nightly/repo.redist/cfg_cache' is missing"
                     }
                     return false;
                 }
@@ -521,7 +539,9 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
             steps {
                 dir("${env.WORKSPACE}") {
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
-                    sh 'pkgcopy "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" "${URL_IPS_REPO}"'
+                    sh """
+pkgcopy "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" "${URL_IPS_REPO}"
+"""
                 }
             }
         }
