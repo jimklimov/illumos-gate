@@ -167,8 +167,19 @@ net_open(struct open_file *f, ...)
 		setenv("boot.netif.ip", inet_ntoa(myip), 1);
 		setenv("boot.netif.netmask", intoa(netmask), 1);
 		setenv("boot.netif.gateway", inet_ntoa(gateip), 1);
-		setenv("boot.nfsroot.server", inet_ntoa(rootip), 1);
-		setenv("boot.nfsroot.path", rootpath, 1);
+		setenv("boot.netif.server", inet_ntoa(rootip), 1);
+		if (netproto == NET_TFTP) {
+			setenv("boot.tftproot.server", inet_ntoa(rootip), 1);
+			setenv("boot.tftproot.path", rootpath, 1);
+		} else {
+			setenv("boot.nfsroot.server", inet_ntoa(rootip), 1);
+			setenv("boot.nfsroot.path", rootpath, 1);
+		}
+		if (intf_mtu != 0) {
+			char mtu[16];
+			snprintf(mtu, sizeof(mtu), "%u", intf_mtu);
+			setenv("boot.netif.mtu", mtu, 1);
+		}
 	}
 	netdev_opens++;
 	f->f_devdata = &netdev_sock;
@@ -334,28 +345,30 @@ static int
 net_print(int verbose)
 {
 	struct netif_driver *drv;
-	char line[80];
 	int i, d, cnt;
 	int ret = 0;
+
+	if (netif_drivers[0] == NULL)
+		return (ret);
+
+	printf("%s devices:", netdev.dv_name);
+	if ((ret = pager_output("\n")) != 0)
+		return (ret);
 
 	cnt = 0;
 	for (d = 0; netif_drivers[d]; d++) {
 		drv = netif_drivers[d];
 		for (i = 0; i < drv->netif_nifs; i++) {
-			snprintf(line, 80, "\t%s%d:", "net", cnt++);
-			ret = pager_output(line);
-			if (ret != 0)
-				break;
+			printf("\t%s%d:", netdev.dv_name, cnt++);
 			if (verbose) {
-				snprintf(line, 80, " (%s%d)", drv->netif_bname,
+				printf(" (%s%d)", drv->netif_bname,
 				    drv->netif_ifs[i].dif_unit);
-				ret = pager_output(line);
-				if (ret != 0)
-					break;
 			}
+			if ((ret = pager_output("\n")) != 0)
+				return (ret);
 		}
 	}
-	return (ret |= pager_output("\n"));
+	return (ret);
 }
 
 /*
@@ -367,6 +380,13 @@ net_parse_rootpath()
 {
 	int i;
 	n_long addr = INADDR_NONE;
+
+	netproto = NET_NFS;
+
+	if (tftpip.s_addr != 0) {
+		netproto = NET_TFTP;
+		addr = tftpip.s_addr;
+	}
 
 	for (i = 0; rootpath[i] != '\0' && i < FNAME_SIZE; i++)
 		if (rootpath[i] == ':')

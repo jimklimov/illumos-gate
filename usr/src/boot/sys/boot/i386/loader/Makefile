@@ -53,7 +53,7 @@ INTERNALPROG=
 # architecture-specific loader code
 SRCS=		main.c conf.c vers.c chain.c
 
-CPPFLAGS +=	-DLOADER_TFTP_SUPPORT -DLOADER_GZIP_SUPPORT
+CPPFLAGS +=	-DLOADER_GZIP_SUPPORT
 
 # Enable BootForth
 CPPFLAGS +=	-DBOOT_FORTH -I$(SRC)/common/ficl -I../../ficl
@@ -110,7 +110,7 @@ vers.c:	../../common/newvers.sh version
 	$(SH) ../../common/newvers.sh version ${NEWVERSWHAT}
 
 ${LOADER}: ${LOADER}.bin ${BTXLDR} ${BTXKERN}
-	$(BTXLD) -v -f aout -e ${LOADER_ADDRESS} -o $@ -l ${BTXLDR} \
+	$(BTXLD) -f aout -e ${LOADER_ADDRESS} -o $@ -l ${BTXLDR} \
 		-b ${BTXKERN} ${LOADER}.bin
 
 ${LOADER}.bin: ${LOADER}.sym

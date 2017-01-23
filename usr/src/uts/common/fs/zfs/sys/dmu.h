@@ -48,6 +48,7 @@
 #include <sys/inttypes.h>
 #include <sys/cred.h>
 #include <sys/fs/zfs.h>
+#include <sys/zio_compress.h>
 #include <sys/zio_priority.h>
 
 #ifdef	__cplusplus
@@ -419,7 +420,7 @@ dmu_write_embedded(objset_t *os, uint64_t object, uint64_t offset,
 #define	WP_SPILL	0x4
 
 void dmu_write_policy(objset_t *os, dnode_t *dn, int level, int wp,
-    struct zio_prop *zp);
+    enum zio_compress compress_override, struct zio_prop *zp);
 /*
  * The bonus data is accessed more or less like a regular buffer.
  * You must dmu_bonus_hold() to get the buffer, which will give you a
@@ -564,12 +565,7 @@ typedef struct dmu_buf_user {
  * NOTE: This function should only be called once on a given dmu_buf_user_t.
  *       To allow enforcement of this, dbu must already be zeroed on entry.
  */
-#ifdef __lint
-/* Very ugly, but it beats issuing suppression directives in many Makefiles. */
-extern void
-dmu_buf_init_user(dmu_buf_user_t *dbu, dmu_buf_evict_func_t *evict_func,
-    dmu_buf_evict_func_t *evict_func_async, dmu_buf_t **clear_on_evict_dbufp);
-#else /* __lint */
+/*ARGSUSED*/
 inline void
 dmu_buf_init_user(dmu_buf_user_t *dbu, dmu_buf_evict_func_t *evict_func_sync,
     dmu_buf_evict_func_t *evict_func_async, dmu_buf_t **clear_on_evict_dbufp)
@@ -585,7 +581,6 @@ dmu_buf_init_user(dmu_buf_user_t *dbu, dmu_buf_evict_func_t *evict_func_sync,
 	dbu->dbu_clear_on_evict_dbufp = clear_on_evict_dbufp;
 #endif
 }
-#endif /* __lint */
 
 /*
  * Attach user data to a dbuf and mark it for normal (when the dbuf's
@@ -753,8 +748,8 @@ int dmu_xuio_add(struct xuio *uio, struct arc_buf *abuf, offset_t off,
 int dmu_xuio_cnt(struct xuio *uio);
 struct arc_buf *dmu_xuio_arcbuf(struct xuio *uio, int i);
 void dmu_xuio_clear(struct xuio *uio, int i);
-void xuio_stat_wbuf_copied();
-void xuio_stat_wbuf_nocopy();
+void xuio_stat_wbuf_copied(void);
+void xuio_stat_wbuf_nocopy(void);
 
 extern boolean_t zfs_prefetch_disable;
 extern int zfs_max_recordsize;

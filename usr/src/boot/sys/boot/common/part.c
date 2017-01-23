@@ -119,7 +119,7 @@ parttype2str(enum partition_type type)
 {
 	size_t i;
 
-	for (i = 0; i < sizeof(ptypes) / sizeof(ptypes[0]); i++)
+	for (i = 0; i < nitems(ptypes); i++)
 		if (ptypes[i].type == type)
 			return (ptypes[i].desc);
 	return (ptypes[0].desc);
@@ -690,8 +690,7 @@ out:
 }
 
 struct ptable*
-ptable_open(void *dev, off_t sectors, uint16_t sectorsize,
-    diskread_t *dread)
+ptable_open(void *dev, uint64_t sectors, uint16_t sectorsize, diskread_t *dread)
 {
 	struct dos_partition *dp;
 	struct ptable *table;

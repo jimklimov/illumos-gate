@@ -24,6 +24,7 @@
  * Copyright (c) 2013 Steven Hartland. All rights reserved.
  * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
+ * Copyright 2016 Nexenta Systems, Inc.  All rights reserved.
  */
 
 #include <sys/dsl_pool.h>
@@ -424,14 +425,6 @@ dsl_pool_mos_diduse_space(dsl_pool_t *dp,
 	mutex_exit(&dp->dp_lock);
 }
 
-static int
-deadlist_enqueue_cb(void *arg, const blkptr_t *bp, dmu_tx_t *tx)
-{
-	dsl_deadlist_t *dl = arg;
-	dsl_deadlist_insert(dl, bp, tx);
-	return (0);
-}
-
 static void
 dsl_pool_sync_mos(dsl_pool_t *dp, dmu_tx_t *tx)
 {
@@ -501,6 +494,16 @@ dsl_pool_sync(dsl_pool_t *dp, uint64_t txg)
 	dsl_pool_undirty_space(dp, dp->dp_dirty_pertxg[txg & TXG_MASK], txg);
 
 	/*
+	 * Update the long range free counter after
+	 * we're done syncing user data
+	 */
+	mutex_enter(&dp->dp_lock);
+	ASSERT(spa_sync_pass(dp->dp_spa) == 1 ||
+	    dp->dp_long_free_dirty_pertxg[txg & TXG_MASK] == 0);
+	dp->dp_long_free_dirty_pertxg[txg & TXG_MASK] = 0;
+	mutex_exit(&dp->dp_lock);
+
+	/*
 	 * After the data blocks have been written (ensured by the zio_wait()
 	 * above), update the user/group space accounting.
 	 */
@@ -532,11 +535,7 @@ dsl_pool_sync(dsl_pool_t *dp, uint64_t txg)
 	 *  - release hold from dsl_dataset_dirty()
 	 */
 	while ((ds = list_remove_head(&synced_datasets)) != NULL) {
-		objset_t *os = ds->ds_objset;
-		bplist_iterate(&ds->ds_pending_deadlist,
-		    deadlist_enqueue_cb, &ds->ds_deadlist, tx);
-		ASSERT(!dmu_objset_is_dirty(os, txg));
-		dmu_buf_rele(ds->ds_dbuf, ds);
+		dsl_dataset_sync_done(ds, tx);
 	}
 	while ((dd = txg_list_remove(&dp->dp_dirty_dirs, txg)) != NULL) {
 		dsl_dir_sync(dd, tx);

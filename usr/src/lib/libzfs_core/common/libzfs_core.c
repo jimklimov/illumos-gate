@@ -85,7 +85,7 @@
 #include <sys/stat.h>
 #include <sys/zfs_ioctl.h>
 
-static int g_fd;
+static int g_fd = -1;
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_refcount;
 
@@ -110,9 +110,14 @@ libzfs_core_fini(void)
 {
 	(void) pthread_mutex_lock(&g_lock);
 	ASSERT3S(g_refcount, >, 0);
-	g_refcount--;
-	if (g_refcount == 0)
+
+	if (g_refcount > 0)
+		g_refcount--;
+
+	if (g_refcount == 0 && g_fd != -1) {
 		(void) close(g_fd);
+		g_fd = -1;
+	}
 	(void) pthread_mutex_unlock(&g_lock);
 }
 
@@ -126,6 +131,7 @@ lzc_ioctl(zfs_ioc_t ioc, const char *name,
 	size_t size;
 
 	ASSERT3S(g_refcount, >, 0);
+	VERIFY3S(g_fd, !=, -1);
 
 	(void) strlcpy(zc.zc_name, name, sizeof (zc.zc_name));
 
@@ -328,6 +334,9 @@ lzc_exists(const char *dataset)
 	 */
 	zfs_cmd_t zc = { 0 };
 
+	ASSERT3S(g_refcount, >, 0);
+	VERIFY3S(g_fd, !=, -1);
+
 	(void) strlcpy(zc.zc_name, dataset, sizeof (zc.zc_name));
 	return (ioctl(g_fd, ZFS_IOC_OBJSET_STATS, &zc) == 0);
 }
@@ -487,6 +496,8 @@ lzc_send_resume(const char *snapname, const char *from, int fd,
 		fnvlist_add_boolean(args, "largeblockok");
 	if (flags & LZC_SEND_FLAG_EMBED_DATA)
 		fnvlist_add_boolean(args, "embedok");
+	if (flags & LZC_SEND_FLAG_COMPRESS)
+		fnvlist_add_boolean(args, "compressok");
 	if (resumeobj != 0 || resumeoff != 0) {
 		fnvlist_add_uint64(args, "resume_object", resumeobj);
 		fnvlist_add_uint64(args, "resume_offset", resumeoff);
@@ -512,7 +523,8 @@ lzc_send_resume(const char *snapname, const char *from, int fd,
  * an equivalent snapshot.
  */
 int
-lzc_send_space(const char *snapname, const char *from, uint64_t *spacep)
+lzc_send_space(const char *snapname, const char *from,
+    enum lzc_send_flags flags, uint64_t *spacep)
 {
 	nvlist_t *args;
 	nvlist_t *result;
@@ -521,6 +533,12 @@ lzc_send_space(const char *snapname, const char *from, uint64_t *spacep)
 	args = fnvlist_alloc();
 	if (from != NULL)
 		fnvlist_add_string(args, "from", from);
+	if (flags & LZC_SEND_FLAG_LARGE_BLOCK)
+		fnvlist_add_boolean(args, "largeblockok");
+	if (flags & LZC_SEND_FLAG_EMBED_DATA)
+		fnvlist_add_boolean(args, "embedok");
+	if (flags & LZC_SEND_FLAG_COMPRESS)
+		fnvlist_add_boolean(args, "compressok");
 	err = lzc_ioctl(ZFS_IOC_SEND_SPACE, snapname, args, &result);
 	nvlist_free(args);
 	if (err == 0)
@@ -564,6 +582,7 @@ recv_impl(const char *snapname, nvlist_t *props, const char *origin,
 	int error;
 
 	ASSERT3S(g_refcount, >, 0);
+	VERIFY3S(g_fd, !=, -1);
 
 	/* zc_name is name of containing filesystem */
 	(void) strlcpy(zc.zc_name, snapname, sizeof (zc.zc_name));
@@ -703,6 +722,8 @@ lzc_rollback(const char *fsname, char *snapnamebuf, int snapnamelen)
 		const char *snapname = fnvlist_lookup_string(result, "target");
 		(void) strlcpy(snapnamebuf, snapname, snapnamelen);
 	}
+	nvlist_free(result);
+
 	return (err);
 }
 

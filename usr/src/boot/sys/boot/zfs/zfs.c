@@ -418,7 +418,7 @@ struct zfs_probe_args {
 };
 
 static int
-zfs_diskread(void *arg, void *buf, size_t blocks, off_t offset)
+zfs_diskread(void *arg, void *buf, size_t blocks, uint64_t offset)
 {
 	struct zfs_probe_args *ppa;
 
@@ -525,6 +525,13 @@ zfs_dev_print(int verbose)
 	char line[80];
 	int ret = 0;
 
+	if (STAILQ_EMPTY(&zfs_pools))
+		return (0);
+
+	printf("%s devices:", zfs_dev.dv_name);
+	if ((ret = pager_output("\n")) != 0)
+		return (ret);
+
 	if (verbose) {
 		return (spa_all_status());
 	}
@@ -586,8 +593,8 @@ zfs_dev_close(struct open_file *f)
 }
 
 static int
-zfs_dev_strategy(void *devdata, int rw, daddr_t dblk, size_t offset,
-    size_t size, char *buf, size_t *rsize)
+zfs_dev_strategy(void *devdata, int rw, daddr_t dblk, size_t size,
+    char *buf, size_t *rsize)
 {
 
 	return (ENOSYS);
