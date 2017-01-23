@@ -196,6 +196,8 @@ fi
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
                     sh """
+echo '`date -u`: Envvars :';
+set ;
 echo '`date -u`: STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
 CCACHE_BASEDIR="`pwd`" \\
@@ -473,17 +475,17 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
             }
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
-/* TODO: Default target repos should be networked, to avoid FS security issues */
+/* TODO: Default target repos should be networked, to avoid FS security issues... or maybe not - if we intend to create them as needed */
 /* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
-                            URL_IPS_REPO = "/export/ips/pkg";
+                            URL_IPS_REPO = "/export/ips/jenkins/pkg";
                         } else {
                             if (env["BRANCH"] == "bugfix") {
-                                URL_IPS_REPO = "/export/ips/bugfix";
+                                URL_IPS_REPO = "/export/ips/jenkins/bugfix";
                             } else {
-                                URL_IPS_REPO = "/export/ips/pr";
+                                URL_IPS_REPO = "/export/ips/jenkins/pr";
                             }
                         }
                     }
@@ -513,17 +515,17 @@ pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO
             }
             when {
 /* TODO: Additional/alternate conditions, like "env.BRANCH == "master" ? */
-/* TODO: Default target repos should be networked, to avoid FS security issues */
+/* TODO: Default target repos should be networked, to avoid FS security issues... or maybe not - if we intend to create them as needed */
 /* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
-                            URL_IPS_REPO = "/export/ips/pkg-debug";
+                            URL_IPS_REPO = "/export/ips/jenkins/pkg-debug";
                         } else {
                             if (env["BRANCH"] == "bugfix") {
-                                URL_IPS_REPO = "/export/ips/bugfix-debug";
+                                URL_IPS_REPO = "/export/ips/jenkins/bugfix-debug";
                             } else {
-                                URL_IPS_REPO = "/export/ips/pr-debug";
+                                URL_IPS_REPO = "/export/ips/jenkins/pr-debug";
                             }
                         }
                     }
