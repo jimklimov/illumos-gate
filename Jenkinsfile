@@ -25,6 +25,8 @@ pipeline {
      * This assumes a zone or server with required illumos-gate building tools
      * For OmniOS you'd need to preinstall 'illumos-tools' per
      *   https://omnios.omniti.com/wiki.php/illumos-tools
+     * NOTE: Probably you'll need to add a 'text/locale' package too, which may
+     * be not covered at least by older LTS release collection of these tools.
      * On OpenIndiana it would be a large set of packages, on OI Hipster just
      * the 'build-essential' per
      *   http://wiki.illumos.org/display/illumos/How+To+Build+illumos
@@ -37,9 +39,14 @@ pipeline {
         booleanParam(defaultValue: false, description: 'Wipes workspace from untracked files before checkout and build', name: 'action_GitcleanRebuild')
         booleanParam(defaultValue: true,  description: 'Run Git to checkout or update the project sources', name: 'action_DoSCM')
         booleanParam(defaultValue: true,  description: 'Recreate "illumos.sh" with settings for the next build run', name: 'action_PrepIllumos')
+        booleanParam(defaultValue: true,  description: 'Recreate "illumos.sh" with settings from vendor-buildtools.git repo (used verbatim, (almost) no further customizations - in particular, no custom option flags unless BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO==true)', name: 'action_PrepIllumosVendor')
+        string(defaultValue: 'git@bitbucket.org:projectorg/vendor-buildtools.git', description: 'Repo URL with vendor build config', name: 'URL_REPO_VENDOR_BUILDTOOLS')
+        string(defaultValue: 'data/vendor-illumos-gate.env', description: 'Relative path to customized "illumos.sh" in the repo with vendor build config', name: 'RELPATH_REPO_VENDOR_BUILDTOOLS__ILLUMOS_SH')
+        string(defaultValue: 'vendor-jenkins', description: 'Name of the credential for Git checkout of vendor build tools and data', name: 'CREDENTIAL_REPO_VENDOR_BUILDTOOLS')
         booleanParam(defaultValue: true,  description: 'Run "nightly" script to update or rebuild the project in one big step (depending on other settings)', name: 'action_BuildAll')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to update the project in incremental mode (overrides and disables clobber, lint, check)\nNOTE that an increment that has nothing to do can still take an hour to walk the Makefiles!', name: 'option_BuildIncremental')
         string(defaultValue: '-ntCDAlmprf', description: 'The nightly.sh option flags for the illumos-gate build (gate default is -FnCDAlmprt), including the leading dash.\nNon-DEBUG is the default build type. Recognized flags include:\n*    -A  check for ABI differences in .so files\n*    -C  check for cstyle/hdrchk errors\n*    -D  do a build with DEBUG on\n*    -F  do _not_ do a non-DEBUG build\n*    -G  gate keeper default group of options (-au)\n*    -I  integration engineer default group of options (-ampu)\n*    -M  do not run pmodes (safe file permission checker)\n*    -N  do not run protocmp\n*    -R  default group of options for building a release (-mp)\n*    -U  update proto area in the parent\n*    -f  find unreferenced files (requires -lp, conflicts with incremental)\n*    -i  do an incremental build (no "make clobber")\n*    -l  do "make lint" in \$LINTDIRS (default: "\$SRC y")\n*    -m  send mail to \$MAILTO at end of build\n*    -n  do not do a bringover (aka. pull or clone) from the parent\n*    -p  create packages for PIT/RE\n*    -r  check ELF runtime attributes in the proto area\n*    -t  build and use the tools in \$SRC/tools (default setting)\n*    +t  Use the build tools in \$ONBLD_TOOLS/bin\n*    -u  update proto_list_\$MACH and friends in the parent workspace; when used with -f, also build an unrefmaster.out in the parent\n*    -w  report on differences between previous and current proto areas', name: 'BUILDOPT_NIGHTLY_OPTIONS')
+        booleanParam(defaultValue: false, description: 'Do apply BUILDOPT_NIGHTLY_OPTIONS for vendor builds', name: 'BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to only produce non-debug binaries of the project', name: 'action_BuildNonDebug')
         string(defaultValue: '-nt', description: 'The alternate nightly.sh option flags for the illumos-gate to produce debug binaries of the project (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_BLDNONDEBUG')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to produce debug binaries of the project', name: 'action_BuildDebug')
@@ -61,6 +68,7 @@ pipeline {
     }
     environment {
         _ESC_CPP="/usr/lib/cpp"	// Workaround for ILLUMOS-6219, must specify Sun Studio cpp
+        BRANCH="${env.GIT_BRANCH}"
         CCACHE_DIR="${params.CCACHE_DIR}"
         CCACHE_PATH="${params.CCACHE_PATH}"
     }
@@ -122,6 +130,7 @@ pipeline {
                 }
             }
             steps {
+                echo "WORKSPACE:CHECKOUT"
                 sh "mkdir -p '${env.WORKSPACE}'"
                 checkout scm
             }
@@ -181,14 +190,57 @@ fi
             }
         }
 
-        stage("WORKSPACE:BUILD-ALL") {
+        stage("WORKSPACE:PREPARE-VENDOR") {
+            when {
+                expression {
+                    return params["action_PrepIllumosVendor"] == true
+                }
+            }
+            steps {
+/* TODO: Download closed bins from the internet by default/fallback? */
+                dir("${env.WORKSPACE}") {
+                    dir("vendor-buildtools.git") {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: '*/master']],
+                            doGenerateSubmoduleConfigurations: false,
+                            extensions: [[$class: 'CleanCheckout']],
+                            submoduleCfg: [],
+                            userRemoteConfigs: [[credentialsId: "${params.CREDENTIAL_REPO_VENDOR_BUILDTOOLS}", url: "${params.URL_REPO_VENDOR_BUILDTOOLS}"]]
+                        ])
+                    }
+/* Here we bolt the PKGARCHIVE to path used below in publishing */
+                    script{
+                        def str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO = "false";
+                        if (params["BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO"]) str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO = "true";
+                        env["str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO"] = str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO;
+                    }
+                    sh """
+cat ./`basename ${params.CREDENTIAL_REPO_VENDOR_BUILDTOOLS}`/${params.RELPATH_REPO_VENDOR_BUILDTOOLS__ILLUMOS_SH} \
+> ./illumos.sh && chmod +x illumos.sh || exit
+
+sed -e 's,^\\(export CODEMGR_WS=\\).*\$,\\1"${env.WORKSPACE}",' \\
+    -i illumos.sh || exit
+
+sed -e 's,^\\(export PKGARCHIVE=\\).*\$,export PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly-core",' \\
+    -i illumos.sh || exit
+
+if [ "\${str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO}" = true ]; then
+    sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIONS}",' \\
+        -i illumos.sh || exit
+fi
+"""
+                }
+            }
+        }
+
+        stage("WORKSPACE:BUILD-ALL-FULL") {
             environment {
-                str_option_BuildIncremental = params["option_BuildIncremental"] ? "-i" : "";
-                str_nametag = "build-all" + ( params["option_BuildIncremental"] ? "-incremental" : "-full" );
+                str_nametag = "build-all-full";
+                str_option_BuildIncremental = "";
             }
             when {
                 expression {
-                    return params["action_BuildAll"] == true
+                    return (params["action_BuildAll"] == true && params["option_BuildIncremental"] == false)
                 }
             }
             steps {
@@ -201,7 +253,7 @@ set ;
 echo '`date -u`: STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
 CCACHE_BASEDIR="`pwd`" \\
-echo time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
+time ./nightly.sh \${str_option_BuildIncremental} illumos.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
 exit \$RES;
 """
@@ -211,8 +263,48 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh """
-echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
-echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
+tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
+"""
+                        script {
+                            def fileToArchive = readFile "logs_to_archive-${env.str_nametag}.csv"
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "${fileToArchive}", fingerprint: true, name:"archiveLogs-${env.str_nametag}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("WORKSPACE:BUILD-ALL-INCREMENTAL") {
+            environment {
+                str_nametag = "build-all-incremental";
+                str_option_BuildIncremental = "-i";
+            }
+            when {
+                expression {
+                    return (params["action_BuildAll"] == true && params["option_BuildIncremental"] == true)
+                }
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
+                    sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+                    sh """
+echo '`date -u`: STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
+egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
+time ./nightly.sh \${env.str_option_BuildIncremental} illumos.sh; RES=\$?;
+[ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
+exit \$RES;
+"""
+                }
+            }
+            post {
+                always {
+                    dir("${env.WORKSPACE}") {
+                        sh """
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
 """
                         script {
@@ -255,8 +347,8 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh """
-echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
-echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
 """
                         script {
@@ -299,8 +391,8 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh """
-echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
-echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
 """
                         script {
@@ -343,8 +435,8 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh """
-echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
-echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
 """
                         script {
@@ -389,8 +481,8 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh """
-echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
-echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
 """
                         script {
@@ -433,8 +525,8 @@ exit \$RES;
                 always {
                     dir("${env.WORKSPACE}") {
                         sh """
-echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg"
-echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt
+echo "BUILD LOG - SHORT [${env.str_nametag}]:"; cat "`ls -1d log/log.*/ | sort -n | tail -1`/mail_msg" || echo "No logs found, was build skipped?"
+echo "ARCHIVE BUILD LOG REPORT [${env.str_nametag}]:"; ( echo "log/nightly.log" && find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > logs_to_archive-${env.str_nametag}.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.str_nametag}.csv && cat logs_to_archive-${env.str_nametag}.csv
 """
                         script {
@@ -451,7 +543,7 @@ tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.st
                 dir("${env.WORKSPACE}") {
                     sh """
 echo "PACKAGES and PROTO locations under `pwd` :"; ( ls -lad packages/*/* ; ls -lad proto/*/* ; ) || true
-echo "ARCHIVE RECENT BUILD LOG AND PKGREPO:"; ( echo "log/nightly.log" ; echo "packages/" ; echo "*.sh"; echo "*.env"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > products_to_archive.txt
+echo "ARCHIVE RECENT BUILD LOG AND PKGREPO:"; ( echo "log/nightly.log" ; echo "packages/" ; echo "*.sh"; echo "*.env"; find "`ls -1d log/log.*/ | sort -n | tail -1`" -type f ) > products_to_archive.txt || echo "No logs found, was build skipped?"
 tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat products_to_archive-csv.txt
 """
                     script {
@@ -470,7 +562,7 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
 
         stage("WORKSPACE:PUBLISH_IPS-NON_DEBUG:i386") {
             environment {
-                URL_IPS_REPO = params["URL_IPS_REPO"];
+                URL_IPS_REPO = "${params.URL_IPS_REPO}";
                 str_nametag = "publish-non_debug";
             }
             when {
@@ -478,6 +570,8 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
 /* TODO: Default target repos should be networked, to avoid FS security issues... or maybe not - if we intend to create them as needed */
 /* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
+                    def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
+                    def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/jenkins/pkg";
@@ -502,7 +596,7 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
                 dir("${env.WORKSPACE}") {
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
                     sh """
-pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO}"
+pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS_REPO" 'pkg:/*'
 """
                 }
             }
@@ -510,7 +604,7 @@ pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO
 
         stage("WORKSPACE:PUBLISH_IPS-DEBUG:i386") {
             environment {
-                URL_IPS_REPO = params["URL_IPS_REPO"];
+                URL_IPS_REPO = "${params.URL_IPS_REPO}";
                 str_nametag = "publish-debug";
             }
             when {
@@ -518,6 +612,8 @@ pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO
 /* TODO: Default target repos should be networked, to avoid FS security issues... or maybe not - if we intend to create them as needed */
 /* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
+                    def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
+                    def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/jenkins/pkg-debug";
@@ -542,7 +638,7 @@ pkgcopy "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" "${URL_IPS_REPO
                 dir("${env.WORKSPACE}") {
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
                     sh """
-pkgcopy "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" "${URL_IPS_REPO}"
+pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" -d "$URL_IPS_REPO" 'pkg:/*'
 """
                 }
             }
