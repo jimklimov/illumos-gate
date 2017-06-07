@@ -301,6 +301,7 @@ tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.st
                     sh """
 echo '`date -u`: STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
+CCACHE_BASEDIR="`pwd`" \\
 time ./nightly.sh \${env.str_option_BuildIncremental} illumos.sh; RES=\$?;
 [ "\$RES" = 0 ] || echo "BUILD FAILED (code \$RES), see more details in its logs";
 exit \$RES;
