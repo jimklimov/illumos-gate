@@ -68,7 +68,14 @@ pipeline {
     }
     environment {
         _ESC_CPP="/usr/lib/cpp"	// Workaround for ILLUMOS-6219, must specify Sun Studio cpp
-        BRANCH="${env.GIT_BRANCH}"
+        /* Note: according to https://issues.jenkins-ci.org/browse/JENKINS-35230
+         * the BRANCH_NAME should be used, with caveat that for PRs it may take
+         * the value of PR-1234 rather than Git branch name. It sort of makes
+         * sense however to do branch-related activities just for (re-)builds
+         * based on an actually merged well-known branch name.
+         */
+        // BRANCH="${env.GIT_BRANCH}"
+        BRANCH="${env.BRANCH_NAME}"
         CCACHE_DIR="${params.CCACHE_DIR}"
         CCACHE_PATH="${params.CCACHE_PATH}"
     }
