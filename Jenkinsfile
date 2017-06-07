@@ -142,12 +142,13 @@ pipeline {
                     return params["action_PrepIllumos"] == true
                 }
             }
-            environment {
-                str_option_UseCCACHE = params["option_UseCCACHE"] ? "true" : "false"
-            }
             steps {
 /* TODO: Download closed bins from the internet by default/fallback? */
                 dir("${env.WORKSPACE}") {
+                    script {
+                        def str_option_UseCCACHE = params["option_UseCCACHE"] ? "true" : "false";
+                        env["str_option_UseCCACHE"] = str_option_UseCCACHE;
+                    }
                     sh """
 sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIONS}",' \\
     -e 's,^\\(export ON_CLOSED_BINS=\\).*\$,\\1"${params.BUILDOPT_ON_CLOSED_BINS}",' \\
