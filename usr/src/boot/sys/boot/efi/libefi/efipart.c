@@ -25,8 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
+#include <sys/disk.h>
 #include <sys/param.h>
 #include <sys/time.h>
 #include <stddef.h>
@@ -39,13 +39,13 @@ __FBSDID("$FreeBSD$");
 #include <efiprot.h>
 
 static EFI_GUID blkio_guid = BLOCK_IO_PROTOCOL;
-static EFI_GUID devpath_guid = DEVICE_PATH_PROTOCOL;
 
 static int efipart_init(void);
 static int efipart_strategy(void *, int, daddr_t, size_t, char *, size_t *);
 static int efipart_realstrategy(void *, int, daddr_t, size_t, char *, size_t *);
 static int efipart_open(struct open_file *, ...);
 static int efipart_close(struct open_file *);
+static int efipart_ioctl(struct open_file *, u_long, void *);
 static int efipart_print(int);
 
 struct devsw efipart_dev = {
@@ -55,7 +55,7 @@ struct devsw efipart_dev = {
 	.dv_strategy = efipart_strategy,
 	.dv_open = efipart_open,
 	.dv_close = efipart_close,
-	.dv_ioctl = noioctl,
+	.dv_ioctl = efipart_ioctl,
 	.dv_print = efipart_print,
 	.dv_cleanup = NULL
 };
@@ -84,7 +84,6 @@ efipart_init(void)
 	UINTN sz;
 	u_int n, nin, nout;
 	int err;
-	size_t devpathlen;
 
 	sz = 0;
 	hin = NULL;
@@ -111,19 +110,10 @@ efipart_init(void)
 		return (ENOMEM);
 
 	for (n = 0; n < nin; n++) {
-		status = BS->HandleProtocol(hin[n], &devpath_guid,
-		    (void **)&devpath);
-		if (EFI_ERROR(status)) {
+		devpath = efi_lookup_devpath(hin[n]);
+		if (devpath == NULL) {
 			continue;
 		}
-
-		node = devpath;
-		devpathlen = DevicePathNodeLength(node);
-		while (!IsDevicePathEnd(NextDevicePathNode(node))) {
-			node = NextDevicePathNode(node);
-			devpathlen += DevicePathNodeLength(node);
-		}
-		devpathlen += DevicePathNodeLength(NextDevicePathNode(node));
 
 		status = BS->HandleProtocol(hin[n], &blkio_guid,
 		    (void**)&blkio);
@@ -139,14 +129,13 @@ efipart_init(void)
 		 * we try to find the parent device and add that instead as
 		 * that will be the CD filesystem.
 		 */
+		if ((node = efi_devpath_last_node(devpath)) == NULL)
+			continue;
 		if (DevicePathType(node) == MEDIA_DEVICE_PATH &&
 		    DevicePathSubType(node) == MEDIA_CDROM_DP) {
-			devpathcpy = malloc(devpathlen);
-			memcpy(devpathcpy, devpath, devpathlen);
-			node = devpathcpy;
-			while (!IsDevicePathEnd(NextDevicePathNode(node)))
-				node = NextDevicePathNode(node);
-			SetDevicePathEndNode(node);
+			devpathcpy = efi_devpath_trim(devpath);
+			if (devpathcpy == NULL)
+				continue;
 			tmpdevpath = devpathcpy;
 			status = BS->LocateDevicePath(&blkio_guid, &tmpdevpath,
 			    &handle);
@@ -253,6 +242,32 @@ efipart_close(struct open_file *f)
 	return (0);
 }
 
+static int
+efipart_ioctl(struct open_file *f, u_long cmd, void *data)
+{
+	struct devdesc *dev;
+	EFI_BLOCK_IO *blkio;
+
+	dev = (struct devdesc *)(f->f_devdata);
+	if (dev->d_opendata == NULL)
+		return (EINVAL);
+	blkio = dev->d_opendata;
+
+	switch (cmd) {
+	case DIOCGSECTORSIZE:
+		*(u_int *)data = blkio->Media->BlockSize;
+		break;
+	case DIOCGMEDIASIZE:
+		*(uint64_t *)data = blkio->Media->BlockSize *
+		    (blkio->Media->LastBlock + 1);
+		break;
+	default:
+		return (ENOTTY);
+	}
+
+	return (0);
+}
+
 /*
  * efipart_readwrite()
  * Internal equivalent of efipart_strategy(), which operates on the
@@ -273,7 +288,7 @@ efipart_readwrite(EFI_BLOCK_IO *blkio, int rw, daddr_t blk, daddr_t nblks,
 	if ((blk + nblks - 1) > blkio->Media->LastBlock)
 		return (EIO);
 
-	switch (rw) {
+	switch (rw & F_MASK) {
 	case F_READ:
 		status = blkio->ReadBlocks(blkio, blkio->Media->MediaId, blk,
 		    nblks * blkio->Media->BlockSize, buf);
@@ -313,7 +328,7 @@ efipart_realstrategy(void *devdata, int rw, daddr_t blk, size_t size,
 {
 	struct devdesc *dev = (struct devdesc *)devdata;
 	EFI_BLOCK_IO *blkio;
-	off_t off;
+	uint64_t off;
 	char *blkbuf;
 	size_t blkoff, blksz;
 	int error;
@@ -340,11 +355,14 @@ efipart_realstrategy(void *devdata, int rw, daddr_t blk, size_t size,
 	if (rsize != NULL)
 		*rsize = size;
 
-	if (blkio->Media->BlockSize == 512)
-		return (efipart_readwrite(blkio, rw, blk, size / 512, buf));
+	if ((size % blkio->Media->BlockSize == 0) &&
+	    (off % blkio->Media->BlockSize == 0))
+		return (efipart_readwrite(blkio, rw,
+		    off / blkio->Media->BlockSize,
+		    size / blkio->Media->BlockSize, buf));
 
 	/*
-	 * The block size of the media is not 512B per sector.
+	 * The buffer size is not a multiple of the media block size.
 	 */
 	blkbuf = malloc(blkio->Media->BlockSize);
 	if (blkbuf == NULL)

@@ -130,6 +130,8 @@ typedef enum {
 	SHARED_SMB = 0x4
 } zfs_share_type_t;
 
+#define	CONFIG_BUF_MINSIZE	65536
+
 int zfs_error(libzfs_handle_t *, int, const char *);
 int zfs_error_fmt(libzfs_handle_t *, int, const char *, ...);
 void zfs_error_aux(libzfs_handle_t *, const char *, ...);
@@ -201,7 +203,6 @@ void namespace_clear(libzfs_handle_t *);
  */
 
 extern int zfs_init_libshare(libzfs_handle_t *, int);
-extern void zfs_uninit_libshare(libzfs_handle_t *);
 extern int zfs_parse_options(char *, zfs_share_proto_t);
 
 extern int zfs_unshare_proto(zfs_handle_t *,

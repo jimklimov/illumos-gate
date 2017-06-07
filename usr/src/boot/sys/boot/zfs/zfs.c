@@ -487,7 +487,7 @@ zfs_probe_dev(const char *devname, uint64_t *pool_guid)
 {
 	struct ptable *table;
 	struct zfs_probe_args pa;
-	off_t mediasz;
+	uint64_t mediasz;
 	int ret;
 
 	pa.fd = open(devname, O_RDONLY);
@@ -691,16 +691,18 @@ zfs_bootfs(void *zdev)
 		STAILQ_FOREACH(kid, &vdev->v_children, v_childlink) {
 			/* use this kid? */
 			if (kid->v_state == VDEV_STATE_HEALTHY &&
-			    kid->v_phys_path != NULL);
+			    kid->v_phys_path != NULL) {
 				break;
+			}
 		}
 		if (kid != NULL) {
 			vdev = kid;
 			break;
 		}
 		if (vdev->v_state == VDEV_STATE_HEALTHY &&
-		    vdev->v_phys_path != NULL);
+		    vdev->v_phys_path != NULL) {
 			break;
+		}
 	}
 
 	/*
@@ -708,15 +710,31 @@ zfs_bootfs(void *zdev)
 	 * there has to be at least one healthy vdev, therefore vdev
 	 * can not be NULL.
 	 */
-	sprintf(buf, "zfs-bootfs=%s/%llu", spa->spa_name,
+	/* Set the environment. */
+	snprintf(buf, sizeof (buf), "%s/%llu", spa->spa_name,
+	    (unsigned long long)objnum);
+	setenv("zfs-bootfs", buf, 1);
+	if (vdev->v_phys_path != NULL)
+		setenv("bootpath", vdev->v_phys_path, 1);
+	if (vdev->v_devid != NULL)
+		setenv("diskdevid", vdev->v_devid, 1);
+
+	/*
+	 * Build the command line string. Once our kernel will read
+	 * the environment and we can stop caring about old kernels,
+	 * we can remove this part.
+	 */
+	snprintf(buf, sizeof(buf), "zfs-bootfs=%s/%llu", spa->spa_name,
 	    (unsigned long long)objnum);
 	n = strlen(buf);
 	if (vdev->v_phys_path != NULL) {
-		sprintf(buf+n, ",bootpath=\"%s\"", vdev->v_phys_path);
+		snprintf(buf+n, sizeof (buf) - n, ",bootpath=\"%s\"",
+		    vdev->v_phys_path);
 		n = strlen(buf);
 	}
 	if (vdev->v_devid != NULL) {
-		sprintf(buf+n, ",diskdevid=\"%s\"", vdev->v_devid);
+		snprintf(buf+n, sizeof (buf) - n, ",diskdevid=\"%s\"",
+		    vdev->v_devid);
 	}
 	return (buf);
 }

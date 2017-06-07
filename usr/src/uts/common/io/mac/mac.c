@@ -21,7 +21,7 @@
 
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2015 Joyent, Inc.
+ * Copyright 2016 Joyent, Inc.
  * Copyright 2015 Garrett D'Amore <garrett@damore.org>
  */
 
@@ -3042,8 +3042,12 @@ mac_prop_check_size(mac_prop_id_t id, uint_t valsize, boolean_t is_range)
 	case MAC_PROP_EN_2500FDX_CAP:
 	case MAC_PROP_ADV_100GFDX_CAP:
 	case MAC_PROP_EN_100GFDX_CAP:
+	case MAC_PROP_ADV_50GFDX_CAP:
+	case MAC_PROP_EN_50GFDX_CAP:
 	case MAC_PROP_ADV_40GFDX_CAP:
 	case MAC_PROP_EN_40GFDX_CAP:
+	case MAC_PROP_ADV_25GFDX_CAP:
+	case MAC_PROP_EN_25GFDX_CAP:
 	case MAC_PROP_ADV_10GFDX_CAP:
 	case MAC_PROP_EN_10GFDX_CAP:
 	case MAC_PROP_ADV_1000HDX_CAP:
@@ -4197,12 +4201,13 @@ bail:
 			ASSERT(ring->mr_index == 0);
 			mip->mi_default_tx_ring = (mac_ring_handle_t)ring;
 		}
-		if (mip->mi_tx_group_type == MAC_GROUP_TYPE_DYNAMIC)
+		if (mip->mi_tx_group_type == MAC_GROUP_TYPE_DYNAMIC) {
 			mip->mi_txrings_avail = group->mrg_cur_count - 1;
 			/*
 			 * The default ring cannot be reserved.
 			 */
 			mip->mi_txrings_rsvd = 1;
+		}
 		/*
 		 * The default group cannot be reserved. It will be shared
 		 * by clients that do not have an exclusive group.

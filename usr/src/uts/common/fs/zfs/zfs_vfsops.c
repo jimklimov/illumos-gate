@@ -96,11 +96,6 @@ static const fs_operation_def_t zfs_vfsops_template[] = {
 	NULL,			NULL
 };
 
-static const fs_operation_def_t zfs_vfsops_eio_template[] = {
-	VFSNAME_FREEVFS,	{ .vfs_freevfs =  zfs_freevfs },
-	NULL,			NULL
-};
-
 /*
  * We need to keep a count of active fs's.
  * This is necessary to prevent our module
@@ -2248,8 +2243,10 @@ zfs_get_zplprop(objset_t *os, zfs_prop_t prop, uint64_t *value)
 	else
 		pname = zfs_prop_to_name(prop);
 
-	if (os != NULL)
+	if (os != NULL) {
+		ASSERT3U(os->os_phys->os_type, ==, DMU_OST_ZFS);
 		error = zap_lookup(os, MASTER_NODE_OBJ, pname, 8, 1, value);
+	}
 
 	if (error == ENOENT) {
 		/* No value set, use the default value */

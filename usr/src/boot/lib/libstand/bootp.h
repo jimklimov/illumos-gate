@@ -18,10 +18,10 @@
  * University.  Carnegie Mellon makes no representations about the
  * suitability of this software for any purpose.  It is provided "as is"
  * without express or implied warranty.
- *
- * $FreeBSD$
  */
 
+#ifndef _BOOTP_H_
+#define	_BOOTP_H_
 
 struct bootp {
 	unsigned char	bp_op;		/* packet opcode type */
@@ -106,7 +106,6 @@ struct bootp {
 #define TAG_T2			((unsigned char)  59)
 #define TAG_CLASSID		((unsigned char)  60)
 #define TAG_CLIENTID		((unsigned char)  61)
-#define	TAG_TFTP_SERVER		((unsigned char) 150)
 #endif
 
 #define TAG_END			((unsigned char) 255)
@@ -145,3 +144,7 @@ struct cmu_vend {
 
 /* v_flags values */
 #define VF_SMASK	1	/* Subnet mask field contains valid data */
+
+int	dhcp_try_rfc1048(uint8_t *cp, size_t len);
+
+#endif /* _BOOTP_H_ */

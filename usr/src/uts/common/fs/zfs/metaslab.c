@@ -394,6 +394,7 @@ metaslab_class_expandable_space(metaslab_class_t *mc)
 
 	spa_config_enter(mc->mc_spa, SCL_VDEV, FTAG, RW_READER);
 	for (int c = 0; c < rvd->vdev_children; c++) {
+		uint64_t tspace;
 		vdev_t *tvd = rvd->vdev_child[c];
 		metaslab_group_t *mg = tvd->vdev_mg;
 
@@ -406,9 +407,13 @@ metaslab_class_expandable_space(metaslab_class_t *mc)
 		 * Calculate if we have enough space to add additional
 		 * metaslabs. We report the expandable space in terms
 		 * of the metaslab size since that's the unit of expansion.
+		 * Adjust by efi system partition size.
 		 */
-		space += P2ALIGN(tvd->vdev_max_asize - tvd->vdev_asize,
-		    1ULL << tvd->vdev_ms_shift);
+		tspace = tvd->vdev_max_asize - tvd->vdev_asize;
+		if (tspace > mc->mc_spa->spa_bootsize) {
+			tspace -= mc->mc_spa->spa_bootsize;
+		}
+		space += P2ALIGN(tspace, 1ULL << tvd->vdev_ms_shift);
 	}
 	spa_config_exit(mc->mc_spa, SCL_VDEV, FTAG);
 	return (space);
@@ -1563,11 +1568,19 @@ metaslab_set_fragmentation(metaslab_t *msp)
 		uint64_t txg = spa_syncing_txg(spa);
 		vdev_t *vd = msp->ms_group->mg_vd;
 
-		if (spa_writeable(spa)) {
+		/*
+		 * If we've reached the final dirty txg, then we must
+		 * be shutting down the pool. We don't want to dirty
+		 * any data past this point so skip setting the condense
+		 * flag. We can retry this action the next time the pool
+		 * is imported.
+		 */
+		if (spa_writeable(spa) && txg < spa_final_dirty_txg(spa)) {
 			msp->ms_condense_wanted = B_TRUE;
 			vdev_dirty(vd, VDD_METASLAB, msp, txg + 1);
 			spa_dbgmsg(spa, "txg %llu, requesting force condense: "
-			    "msp %p, vd %p", txg, msp, vd);
+			    "ms_id %llu, vdev_id %llu", txg, msp->ms_id,
+			    vd->vdev_id);
 		}
 		msp->ms_fragmentation = ZFS_FRAG_INVALID;
 		return;
@@ -2189,12 +2202,16 @@ metaslab_sync(metaslab_t *msp, uint64_t txg)
 	/*
 	 * Normally, we don't want to process a metaslab if there
 	 * are no allocations or frees to perform. However, if the metaslab
-	 * is being forced to condense we need to let it through.
+	 * is being forced to condense and it's loaded, we need to let it
+	 * through.
 	 */
 	if (range_tree_space(alloctree) == 0 &&
 	    range_tree_space(msp->ms_freeingtree) == 0 &&
-	    !msp->ms_condense_wanted)
+	    !(msp->ms_loaded && msp->ms_condense_wanted))
 		return;
+
+
+	VERIFY(txg <= spa_final_dirty_txg(spa));
 
 	/*
 	 * The only state that can actually be changing concurrently with

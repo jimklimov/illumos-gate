@@ -40,7 +40,8 @@ function find_disks
 	typeset all_disks=$(echo '' | sudo -k format | awk \
 	    '/c[0-9]/ {print $2}')
 	typeset used_disks=$(zpool status | awk \
-	    '/c[0-9]*t[0-9a-f]*d[0-9]/ {print $1}' | sed 's/s[0-9]//g')
+	    '/c[0-9]+(t[0-9a-f]+)?d[0-9]+/ {print $1}' | sed -E \
+	    's/(s|p)[0-9]+//g')
 
 	typeset disk used avail_disks
 	for disk in $all_disks; do
@@ -85,8 +86,13 @@ function verify_id
 function verify_disks
 {
 	typeset disk
+	typeset path
 	for disk in $DISKS; do
-		sudo -k prtvtoc /dev/rdsk/${disk}s0 >/dev/null 2>&1
+		case $disk in
+		/*) path=$disk;;
+		*) path=/dev/rdsk/${disk}s0
+		esac
+		sudo -k prtvtoc $path >/dev/null 2>&1
 		[[ $? -eq 0 ]] || return 1
 	done
 	return 0

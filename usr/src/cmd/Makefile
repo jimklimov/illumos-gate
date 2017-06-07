@@ -199,7 +199,6 @@ COMMON_SUBDIRS=		\
 	hostname	\
 	hotplug		\
 	hotplugd	\
-	hwdata		\
 	ibd_upgrade	\
 	iconv		\
 	id		\
@@ -345,7 +344,6 @@ COMMON_SUBDIRS=		\
 	refer		\
 	regcmp		\
 	renice		\
-	rexd		\
 	rm		\
 	rmdir		\
 	rmformat	\
@@ -411,7 +409,6 @@ COMMON_SUBDIRS=		\
 	tbl		\
 	tcopy		\
 	tcpd		\
-	terminfo	\
 	th_tools	\
 	tic		\
 	time		\
@@ -455,6 +452,7 @@ COMMON_SUBDIRS=		\
 	wracct		\
 	write		\
 	xargs		\
+	xhci		\
 	xstr		\
 	yes		\
 	ypcmd		\
@@ -482,7 +480,6 @@ i386_SUBDIRS=		\
 	addbadsec	\
 	biosdev		\
 	diskscan	\
-	lms		\
 	rtc		\
 	ucodeadm	\
 	xvm
@@ -829,9 +826,8 @@ _dc: $(DCSUBDIRS)
 #
 # Dependencies
 #
-fs.d: fstyp
+fs.d:	fstyp
 ksh:	shcomp isaexec
-mdb:	terminfo
 print:	lp
 fmt:	mailx
 

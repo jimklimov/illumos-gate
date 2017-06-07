@@ -20,7 +20,7 @@
  */
 /*
  * Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2011 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2016 by Delphix. All rights reserved.
  * Copyright 2013 Nexenta Systems, Inc. All rights reserved.
  * Copyright 2014 Josef "Jeff" Sipek <jeffpc@josefsipek.net>
  */
@@ -32,7 +32,7 @@
  * Portions Copyright 2009 Advanced Micro Devices, Inc.
  */
 /*
- * Copyright (c) 2015, Joyent, Inc. All rights reserved.
+ * Copyright 2016 Joyent, Inc.
  */
 /*
  * Various routines to handle identification
@@ -57,6 +57,8 @@
 #include <sys/auxv_386.h>
 #include <sys/memnode.h>
 #include <sys/pci_cfgspace.h>
+#include <sys/comm_page.h>
+#include <sys/tsc.h>
 
 #ifdef __xpv
 #include <sys/hypervisor.h>
@@ -421,9 +423,8 @@ static struct cpuid_info cpuid_info0;
  * (loosely defined as "pre-Pentium-4"):
  * P6, PII, Mobile PII, PII Xeon, PIII, Mobile PIII, PIII Xeon
  */
-
 #define	IS_LEGACY_P6(cpi) (			\
-	cpi->cpi_family == 6 && 		\
+	cpi->cpi_family == 6 &&			\
 		(cpi->cpi_model == 1 ||		\
 		cpi->cpi_model == 3 ||		\
 		cpi->cpi_model == 5 ||		\
@@ -1463,7 +1464,13 @@ cpuid_pass1(cpu_t *cpu, uchar_t *featureset)
 	xcpuid = 0;
 	switch (cpi->cpi_vendor) {
 	case X86_VENDOR_Intel:
-		if (IS_NEW_F6(cpi) || cpi->cpi_family >= 0xf)
+		/*
+		 * On KVM we know we will have proper support for extended
+		 * cpuid.
+		 */
+		if (IS_NEW_F6(cpi) || cpi->cpi_family >= 0xf ||
+		    (get_hwenv() == HW_KVM && cpi->cpi_family == 6 &&
+		    (cpi->cpi_model == 6 || cpi->cpi_model == 2)))
 			xcpuid++;
 		break;
 	case X86_VENDOR_AMD:
@@ -4609,27 +4616,30 @@ patch_tsc_read(int flag)
 	size_t cnt;
 
 	switch (flag) {
-	case X86_NO_TSC:
+	case TSC_NONE:
 		cnt = &_no_rdtsc_end - &_no_rdtsc_start;
 		(void) memcpy((void *)tsc_read, (void *)&_no_rdtsc_start, cnt);
 		break;
-	case X86_HAVE_TSCP:
-		cnt = &_tscp_end - &_tscp_start;
-		(void) memcpy((void *)tsc_read, (void *)&_tscp_start, cnt);
-		break;
-	case X86_TSC_MFENCE:
+	case TSC_RDTSC_MFENCE:
 		cnt = &_tsc_mfence_end - &_tsc_mfence_start;
 		(void) memcpy((void *)tsc_read,
 		    (void *)&_tsc_mfence_start, cnt);
 		break;
-	case X86_TSC_LFENCE:
+	case TSC_RDTSC_LFENCE:
 		cnt = &_tsc_lfence_end - &_tsc_lfence_start;
 		(void) memcpy((void *)tsc_read,
 		    (void *)&_tsc_lfence_start, cnt);
 		break;
+	case TSC_TSCP:
+		cnt = &_tscp_end - &_tscp_start;
+		(void) memcpy((void *)tsc_read, (void *)&_tscp_start, cnt);
+		break;
 	default:
+		/* Bail for unexpected TSC types. (TSC_NONE covers 0) */
+		cmn_err(CE_PANIC, "Unrecogized TSC type: %d", flag);
 		break;
 	}
+	tsc_type = flag;
 }
 
 int
