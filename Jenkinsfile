@@ -177,7 +177,7 @@ sed -e 's,^\\(export CODEMGR_WS=\\).*\$,\\1"${env.WORKSPACE}",' \\
 sed -e 's,^\\(export PKGARCHIVE=\\).*\$,export PKGARCHIVE="\${CODEMGR_WS}/packages/\${MACH}/nightly",' \\
     -i illumos.sh || exit
 
-if [ -n "${params.BUILDOPT_PERL_VERSION}" ]; then \\
+if [ -n "${params.BUILDOPT_PERL_VERSION}" ]; then
     [ -d "/usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin" ] || echo "WARNING: Can not find a PERL home at /usr/perl5/${params.BUILDOPT_PERL_VERSION}/bin; will try this version as asked anyways, but the build can fail" >&2
     echo "export PERL_VERSION='${params.BUILDOPT_PERL_VERSION}'" >> ./illumos.sh || exit
     echo "export PERL_PKGVERS='-`echo "${params.BUILDOPT_PERL_VERSION}" | sed s,-,,`'" >> ./illumos.sh || exit
@@ -193,6 +193,11 @@ if [ "${str_option_UseCCACHE}" = "true" ] && [ -x "/usr/bin/ccache" ]; then
     echo "export GCC_ROOT='`pwd`/ccache'" >> ./illumos.sh || exit
     echo 'export CW_GCC_DIR="\$GCC_ROOT/bin"' >> ./illumos.sh || exit
 fi
+
+echo "export BLD_JAVA_8=" >> ./illumos.sh || exit
+#if [ -n "${params.BUILDOPT_USE_JAVA8}" ]; then
+#    echo "export BLD_JAVA_8=" >> ./illumos.sh || exit
+#fi
 """
                 }
             }
