@@ -62,6 +62,7 @@ pipeline {
 /* TODO: Add a sort of build to just update specifed component(s) like a driver module */
         string(defaultValue: '/opt/onbld/closed', description: 'Location where the "closed binaries" are pre-unpacked into', name: 'BUILDOPT_ON_CLOSED_BINS')
         string(defaultValue: '5.22', description: 'Installed PERL version to use for the build (5.10, 5.16, 5.16.1, 5.22, etc)', name: 'BUILDOPT_PERL_VERSION')
+        booleanParam(defaultValue: true, description: 'Use JAVA8 to build illumos-gate (commits after Mar 2017)', name: 'option_UseJAVA8')
         booleanParam(defaultValue: true, description: 'Use CCACHE (if available) to wrap around the GCC compiler', name: 'option_UseCCACHE')
         string(defaultValue: '\${HOME}/.ccache', description: 'If using CCACHE across nodes, you can use a shared cache directory\nNote that if you access nodes via SSH as the same user account, this account can just have a symlink to a shared location on NFS or have wholly the same home using NFS', name: 'CCACHE_DIR')
         string(defaultValue: '/opt/gcc/4.4.4/bin:/opt/gcc/4.4.4/libexec/gcc/i386-pc-solaris2.11/4.4.4:/usr/bin', description: 'If using CCACHE across nodes, these are paths it searches for backend real compilers', name: 'CCACHE_PATH')
@@ -155,6 +156,8 @@ pipeline {
                     script {
                         def str_option_UseCCACHE = params["option_UseCCACHE"] ? "true" : "false";
                         env["str_option_UseCCACHE"] = str_option_UseCCACHE;
+                        def str_option_UseJAVA8 = params["option_UseJAVA8"] ? "true" : "false";
+                        env["str_option_UseJAVA8"] = str_option_UseJAVA8;
                     }
                     sh """
 sed -e 's,^\\(export NIGHTLY_OPTIONS=\\).*\$,\\1"${params.BUILDOPT_NIGHTLY_OPTIONS}",' \\
@@ -194,10 +197,9 @@ if [ "${str_option_UseCCACHE}" = "true" ] && [ -x "/usr/bin/ccache" ]; then
     echo 'export CW_GCC_DIR="\$GCC_ROOT/bin"' >> ./illumos.sh || exit
 fi
 
-echo "export BLD_JAVA_8=" >> ./illumos.sh || exit
-#if [ -n "${params.BUILDOPT_USE_JAVA8}" ]; then
-#    echo "export BLD_JAVA_8=" >> ./illumos.sh || exit
-#fi
+if [ "${str_option_UseJAVA8}" = "true" ] ; then
+    echo "export BLD_JAVA_8=" >> ./illumos.sh || exit
+fi
 """
                 }
             }
