@@ -612,6 +612,18 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
                 dir("${env.WORKSPACE}") {
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
                     sh """
+case "$URL_IPS_REPO" in
+    *://*) ;;
+    /) if [ ! -d "$URL_IPS_REPO" ]; then
+        mkdir -p "$URL_IPS_REPO" && \
+        pkgrepo create "$URL_IPS_REPO" && \
+        pkgrepo set -s "$URL_IPS_REPO" publisher/prefix="on-nightly-${JOB_NAME_UNSLASHED}-nd" && \
+        { pkgrepo set -s "$URL_IPS_REPO" -p "on-nightly-${JOB_NAME_UNSLASHED}-nd" publisher/alias= || true; } && \
+        pkgrepo refresh -s "$URL_IPS_REPO" || \
+        echo "FAILED to prepare empty IPS repo in '$URL_IPS_REPO' at '${env.NODE_NAME}'"
+       fi
+       ;;
+esac
 pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS_REPO" 'pkg:/*'
 """
                 }
@@ -654,6 +666,18 @@ pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS
                 dir("${env.WORKSPACE}") {
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
                     sh """
+case "$URL_IPS_REPO" in
+    *://*) ;;
+    /) if [ ! -d "$URL_IPS_REPO" ]; then
+        mkdir -p "$URL_IPS_REPO" && \
+        pkgrepo create "$URL_IPS_REPO" && \
+        pkgrepo set -s "$URL_IPS_REPO" publisher/prefix="on-nightly-${JOB_NAME_UNSLASHED}-debug" && \
+        { pkgrepo set -s "$URL_IPS_REPO" -p "on-nightly-${JOB_NAME_UNSLASHED}-debug" publisher/alias= || true; } && \
+        pkgrepo refresh -s "$URL_IPS_REPO" || \
+        echo "FAILED to prepare empty IPS repo in '$URL_IPS_REPO' at '${env.NODE_NAME}'"
+       fi
+       ;;
+esac
 pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" -d "$URL_IPS_REPO" 'pkg:/*'
 """
                 }
