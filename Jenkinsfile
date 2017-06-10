@@ -623,7 +623,8 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
                     sh """
 case "$URL_IPS_REPO" in
     *://*) ;;
-    /) if [ ! -d "$URL_IPS_REPO" ]; then
+    /*) if [ ! -d "$URL_IPS_REPO" ]; then
+        echo "Initializing new IPS repository in '$URL_IPS_REPO' at '${env.NODE_NAME}'..."
         mkdir -p "$URL_IPS_REPO" && \
         pkgrepo create "$URL_IPS_REPO" && \
         pkgrepo set -s "$URL_IPS_REPO" publisher/prefix="on-nightly-${JOB_NAME_UNSLASHED}-nd" && \
@@ -681,7 +682,8 @@ pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS
                     sh """
 case "$URL_IPS_REPO" in
     *://*) ;;
-    /) if [ ! -d "$URL_IPS_REPO" ]; then
+    /*) if [ ! -d "$URL_IPS_REPO" ]; then
+        echo "Initializing new IPS repository in '$URL_IPS_REPO' at '${env.NODE_NAME}'..."
         mkdir -p "$URL_IPS_REPO" && \
         pkgrepo create "$URL_IPS_REPO" && \
         pkgrepo set -s "$URL_IPS_REPO" publisher/prefix="on-nightly-${JOB_NAME_UNSLASHED}-debug" && \
