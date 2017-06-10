@@ -592,8 +592,11 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
 /* TODO: Default target repos should be networked, to avoid FS security issues... or maybe not - if we intend to create them as needed */
 /* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
-//                    def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
-//                    def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
+                    def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
+                    def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
+                    env["JOB_NAME_UNSLASHED"] = JOB_NAME_UNSLASHED;
+                    env["BRANCH_UNSLASHED"] = BRANCH_UNSLASHED;
+
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/jenkins/pkg";
@@ -616,12 +619,6 @@ tr '\\n' ',' < products_to_archive.txt > products_to_archive-csv.txt && cat prod
             }
             steps {
                 dir("${env.WORKSPACE}") {
-                    script {
-                        def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
-                        def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
-//                        def str_option_UseJAVA8 = params["option_UseJAVA8"] ? "true" : "false";
-//                        env["str_option_UseJAVA8"] = str_option_UseJAVA8;
-                    }
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
                     sh """
 case "$URL_IPS_REPO" in
@@ -654,8 +651,10 @@ pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS
 /* TODO: Default target repos should be networked, to avoid FS security issues... or maybe not - if we intend to create them as needed */
 /* TODO: Queue a separate parametrized job to fetch this one's artifacts and pkgsend them with rewrite to specific version etc. */
                 expression {
-//                    def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
-//                    def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
+                    def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
+                    def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
+                    env["JOB_NAME_UNSLASHED"] = JOB_NAME_UNSLASHED;
+                    env["BRANCH_UNSLASHED"] = BRANCH_UNSLASHED;
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/jenkins/pkg-debug";
@@ -678,12 +677,6 @@ pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS
             }
             steps {
                 dir("${env.WORKSPACE}") {
-                    script {
-                        def JOB_NAME_UNSLASHED = "${env.JOB_NAME}".replaceAll('/', '_')
-                        def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
-//                        def str_option_UseJAVA8 = params["option_UseJAVA8"] ? "true" : "false";
-//                        env["str_option_UseJAVA8"] = str_option_UseJAVA8;
-                    }
                     echo "Publishing IPS packages from '${env.WORKSPACE}/packages/i386/nightly/repo.redist/' at '${env.NODE_NAME}' to '${URL_IPS_REPO}'"
                     sh """
 case "$URL_IPS_REPO" in
