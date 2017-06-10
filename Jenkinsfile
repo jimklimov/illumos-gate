@@ -636,6 +636,8 @@ case "$URL_IPS_REPO" in
        fi
        ;;
 esac
+"""
+                    sh """
 pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS_REPO" 'pkg:/*'
 """
                 }
@@ -696,6 +698,8 @@ case "$URL_IPS_REPO" in
        fi
        ;;
 esac
+"""
+                    sh """
 pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly/repo.redist/" -d "$URL_IPS_REPO" 'pkg:/*'
 """
                 }
