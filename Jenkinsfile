@@ -57,6 +57,7 @@ pipeline {
         string(defaultValue: '-nCAFir', description: 'The alternate nightly.sh option flags for the illumos-gate post-build checks (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_CHECK')
         booleanParam(defaultValue: false, description: 'Run "nightly" script to only "lint" the project (and do some related activities)', name: 'action_Lint')
         string(defaultValue: '-nl', description: 'The alternate nightly.sh option flags for the illumos-gate post-build linting (if selected)', name: 'BUILDOPT_NIGHTLY_OPTIONS_LINT')
+        booleanParam(defaultValue: true, description: 'Enable archiving of built packages as artifacts (e.g. to reuse elsewhere)', name: 'action_ArchivePackages')
         booleanParam(defaultValue: true, description: 'Enable publishing of local IPS packaging to a remote repository unless earlier steps fail', name: 'action_PublishIPS')
         string(defaultValue: '', description: 'The remote IPS repository URL to which you can publish the updated packages (if empty - then decided by branch name)', name: 'URL_IPS_REPO')
 /* TODO: Add a sort of build to just update specifed component(s) like a driver module */
@@ -555,6 +556,11 @@ tr '\\n' ',' < logs_to_archive-${env.str_nametag}.txt > logs_to_archive-${env.st
         }
 
         stage("WORKSPACE:ArchivePackages") {
+            when {
+                expression {
+                    return params["action_ArchivePackages"] == true
+                }
+            }
             steps {
                 dir("${env.WORKSPACE}") {
                     sh """
