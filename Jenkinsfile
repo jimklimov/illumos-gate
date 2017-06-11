@@ -219,13 +219,16 @@ fi
         stage("WORKSPACE:PREPARE-VENDOR") {
             when {
                 expression {
-                    return params["action_PrepIllumosVendor"] == true
+                    return (params["action_PrepIllumosVendor"] == true && params["URL_REPO_VENDOR_BUILDTOOLS"] != "")
                 }
             }
             steps {
 /* TODO: Download closed bins from the internet by default/fallback? */
+                script {
+                    env["dir_REPO_VENDOR_BUILDTOOLS"] = params["URL_REPO_VENDOR_BUILDTOOLS"].split("/")[-1];
+                }
                 dir("${env.WORKSPACE}") {
-                    dir("vendor-buildtools.git") {
+                    dir("${env.dir_REPO_VENDOR_BUILDTOOLS}") {
                         checkout([$class: 'GitSCM',
                             branches: [[name: '*/master']],
                             doGenerateSubmoduleConfigurations: false,
@@ -241,7 +244,7 @@ fi
                         env["str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO"] = str_BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO;
                     }
                     sh """
-cat ./`basename ${params.CREDENTIAL_REPO_VENDOR_BUILDTOOLS}`/${params.RELPATH_REPO_VENDOR_BUILDTOOLS__ILLUMOS_SH} \
+cat ./${env.dir_REPO_VENDOR_BUILDTOOLS}/${params.RELPATH_REPO_VENDOR_BUILDTOOLS__ILLUMOS_SH} \
 > ./illumos.sh && chmod +x illumos.sh || exit
 
 sed -e 's,^\\(export CODEMGR_WS=\\).*\$,\\1"${env.WORKSPACE}",' \\
