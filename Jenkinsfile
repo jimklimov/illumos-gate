@@ -17,6 +17,16 @@
  */
 
 pipeline {
+    /* NOTE: Designate the illumos-based system with software and tools needed
+     * to build the selected release or fork of illumos-gate (things did change
+     * over the years and distros), set that system up with a Jenkins agent
+     * (needs JRE8 and non-root SSH access) and reasonable user account and
+     * filesystem access to use the checked-out workspace and post back the
+     * packages. A shared "/export/ips" and "/export/home" NFS setup with
+     * same-GID/UID "jenkins" accounts across your nodes can be a reasonable
+     * choice. For CCACHE-enabled setups, using the same homedir and account
+     * allows workers to share this cache too.
+     */
     agent {
         label "illumos-gate-builder"
     }
@@ -39,8 +49,8 @@ pipeline {
         booleanParam(defaultValue: false, description: 'Wipes workspace from untracked files before checkout and build', name: 'action_GitcleanRebuild')
         booleanParam(defaultValue: true,  description: 'Run Git to checkout or update the project sources', name: 'action_DoSCM')
         booleanParam(defaultValue: true,  description: 'Recreate "illumos.sh" with settings for the next build run', name: 'action_PrepIllumos')
-        booleanParam(defaultValue: false,  description: 'Recreate "illumos.sh" with settings from vendor-buildtools.git repo (used verbatim, (almost) no further customizations - in particular, no custom option flags unless BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO==true)', name: 'action_PrepIllumosVendor')
-        string(defaultValue: 'git@bitbucket.org:projectorg/vendor-buildtools.git', description: 'Repo URL with vendor build config', name: 'URL_REPO_VENDOR_BUILDTOOLS')
+        booleanParam(defaultValue: false,  description: 'Recreate "illumos.sh" with settings from a "vendor-buildtools.git" repo (used verbatim, (almost) no further customizations - in particular, no custom option flags unless BUILDOPT_NIGHTLY_OPTIONS_VENDOR_TOO==true)', name: 'action_PrepIllumosVendor')
+        string(defaultValue: 'git@bitbucket.org:projectorg/vendor-buildtools.git', description: 'Repo URL with vendor build config and tools', name: 'URL_REPO_VENDOR_BUILDTOOLS')
         string(defaultValue: 'data/vendor-illumos-gate.env', description: 'Relative path to customized "illumos.sh" in the repo with vendor build config', name: 'RELPATH_REPO_VENDOR_BUILDTOOLS__ILLUMOS_SH')
         string(defaultValue: 'vendor-jenkins', description: 'Name of the credential for Git checkout of vendor build tools and data', name: 'CREDENTIAL_REPO_VENDOR_BUILDTOOLS')
         booleanParam(defaultValue: true,  description: 'Run "nightly" script to update or rebuild the project in one big step (depending on other settings)', name: 'action_BuildAll')
