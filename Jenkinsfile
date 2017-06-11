@@ -276,9 +276,13 @@ fi
                 dir("${env.WORKSPACE}") {
                     sh 'if [ ! -x ./nightly.sh ]; then cp -pf ./usr/src/tools/scripts/nightly.sh ./ && chmod +x nightly.sh || exit ; fi'
                     sh '[ -x ./illumos.sh ] && [ -x ./nightly.sh ] && [ -s ./nightly.sh ] && [ -s ./illumos.sh ]'
+/*
                     sh """
 echo '`date -u`: Envvars :';
 set ;
+"""
+*/
+                    sh """
 echo '`date -u`: STARTING ILLUMOS-GATE BUILD-ALL (prepare to wait... a lot... and in silence!)';
 egrep '[^#]*export NIGHTLY_OPTIONS=' illumos.sh;
 CCACHE_BASEDIR="`pwd`" \\
