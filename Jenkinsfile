@@ -673,6 +673,7 @@ pkgrecv -s "${env.WORKSPACE}/packages/i386/nightly-nd/repo.redist/" -d "$URL_IPS
                     def BRANCH_UNSLASHED = "${env.BRANCH}".replaceAll('/', '_')
                     env["JOB_NAME_UNSLASHED"] = JOB_NAME_UNSLASHED;
                     env["BRANCH_UNSLASHED"] = BRANCH_UNSLASHED;
+
                     if (params["URL_IPS_REPO"] == "") {
                         if (env["BRANCH"] == "master") {
                             URL_IPS_REPO = "/export/ips/jenkins/pkg-debug";
