@@ -84,6 +84,7 @@ MANIFEST_SUBDIRS=			\
 	cmd-inet/usr.lib/ilbd		\
 	cmd-inet/usr.lib/in.chargend	\
 	cmd-inet/usr.lib/in.daytimed	\
+	cmd-inet/usr.lib/in.dhcpd	\
 	cmd-inet/usr.lib/in.discardd	\
 	cmd-inet/usr.lib/in.echod	\
 	cmd-inet/usr.lib/in.ndpd	\

@@ -271,6 +271,10 @@ SUBDIRS +=				\
 	watchmalloc	\
 	$($(MACH)_SUBDIRS)
 
+SUBDIRS += \
+	libdhcpsvc	\
+	libdhcpdu
+
 i386_SUBDIRS=		\
 	libfdisk	\
 	libsaveargs
@@ -311,6 +315,7 @@ MSGSUBDIRS=		\
 	libcmd		\
 	libcontract	\
 	libcurses	\
+	libdhcpsvc 	\
 	libdhcputil	\
 	libdiskmgt	\
 	libdladm	\
@@ -387,6 +392,7 @@ HDRSUBDIRS=				\
 	libdevid	\
 	libdevinfo	\
 	libdhcpagent	\
+	libdhcpsvc	\
 	libdhcputil	\
 	libdisasm	\
 	libdiskmgt	\
@@ -592,8 +598,11 @@ libcpc:		libpctx
 libcrypt:	libgen
 libdevid:	libdevinfo
 libdevinfo:	libsec libgen
-libdhcpagent:	libdhcputil libuuid libdlpi libcontract
-libdhcputil:	libgen libinetutil libdlpi
+#libdhcpagent:	libdhcputil libuuid libdlpi libcontract
+libdhcpagent:	libsocket libdhcputil libuuid libdlpi libcontract
+libdhcpsvc:	libinetutil
+#libdhcputil:	libgen libinetutil libdlpi
+libdhcputil:	libnsl libgen libinetutil libdlpi
 libdiskmgt:	libdevid libdevinfo libadm libefi libkstat libsysevent
 $(INTEL_BLD)libdiskmgt: libfdisk
 libdladm:	libdevinfo libinetutil libscf librcm libexacct libkstat \

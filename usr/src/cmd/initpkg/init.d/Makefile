@@ -32,6 +32,7 @@ i386_PROG=
 
 PROG=		\
 	README		\
+	dhcp		\
 	sysetup		\
 	uucp		\
 	$($(MACH)_PROG)

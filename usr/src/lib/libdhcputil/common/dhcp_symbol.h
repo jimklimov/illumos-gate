@@ -19,14 +19,14 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2014 Garrett D'Amore <garrett@damore.org>
- *
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef	_DHCP_SYMBOL_H
 #define	_DHCP_SYMBOL_H
+
+#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 /*
  * This file, along with <dhcp_symbol_common.h>, contains the DHCP symbol
@@ -36,6 +36,7 @@
  */
 
 #include <sys/types.h>
+#include <dhcp_svc_private.h>
 #include <dhcp_symbol_common.h>
 
 #ifdef	__cplusplus
@@ -45,13 +46,13 @@ extern "C" {
 /*
  * Vendor class length (and implicitly, the number of classes)
  */
-#define	DSYM_CLASS_SIZE		128			/* Single class max */
+#define	DSYM_CLASS_SIZE		DSVC_MAX_MACSYM_LEN	/* Single class max */
 #define	DSYM_MAX_CLASS_SIZE	(DSYM_CLASS_SIZE * 10)	/* At least 10 */
 
 /*
- * Maximum symbol length
+ * Maximum symbol length is defined by the libdhcpsvc.
  */
-#define	DSYM_MAX_SYM_LEN	128
+#define	DSYM_MAX_SYM_LEN	DSVC_MAX_MACSYM_LEN
 
 /*
  * symbol parsing error codes

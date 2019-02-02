@@ -23,19 +23,26 @@
 # Copyright 1999-2003 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Copyright 2014 Garrett D'Amore <garrett@damore.org>
+# ident	"%Z%%M%	%I%	%E% SMI"
 #
 # cmd/cmd-inet/usr.sadm/Makefile
 
+SUBDIRS1=	dhcpmgr
 SUBDIRS2=	scripts
 
 include ../../Makefile.cmd
+#
+# Message catalog
+#
+POFILES= dhcpmgr/lib/dhcpmgr.po
+POFILE= usr.sadm.po
 
 all:=		TARGET= all
 install:=	TARGET= install
 clean:=		TARGET= clean
 clobber:=	TARGET= clobber
 lint:=		TARGET= lint
+_msg:=		TARGET= _msg
 
 .KEEP_STATE:
 
@@ -44,6 +51,15 @@ lint:=		TARGET= lint
 all clean clobber lint: $(SUBDIRS1)
 
 install: $(SUBDIRS1) $(SUBDIRS2)
+
+#
+# message catalog
+#
+_msg: $(SUBDIRS1) .WAIT $(POFILE)
+
+$(POFILE): $(POFILES)
+	$(RM) $@
+	cat $(POFILES) > $@
 
 $(SUBDIRS1) $(SUBDIRS2): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)

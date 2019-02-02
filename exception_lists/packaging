@@ -77,8 +77,14 @@ usr/lib/sparcv9/llib-lsoftcrypto.ln	sparc
 # standalone's DHCP implementation, and the kernel (nfs_dlboot).
 # They contain interfaces which are currently private.
 #
+usr/include/dhcp_svc_confkey.h
+usr/include/dhcp_svc_confopt.h
+usr/include/dhcp_svc_private.h
 usr/include/dhcp_symbol.h
 usr/include/sys/sunos_dhcp_class.h
+usr/lib/libdhcpsvc.so
+usr/lib/llib-ldhcpsvc
+usr/lib/llib-ldhcpsvc.ln
 #
 # Private MAC driver header files
 #

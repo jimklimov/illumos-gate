@@ -45,6 +45,7 @@ _MANFILES=	Intro.5			\
 		crypt_unix.5		\
 		device_clean.5		\
 		dhcp.5			\
+		dhcp_modules.5		\
 		environ.5		\
 		epoll.5			\
 		eqn.5			\

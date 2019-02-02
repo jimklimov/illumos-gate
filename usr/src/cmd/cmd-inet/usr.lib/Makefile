@@ -21,20 +21,21 @@
 
 #
 # Copyright (c) 1996, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2014 Garrett D'Amore <garrett@damore.org>
 #
 
-SUBDIRS=	bridged ilbd in.chargend in.daytimed \
-		in.discardd in.echod in.mpathd in.ndpd \
+SUBDIRS=	bridged dhcp dsvclockd ilbd in.chargend in.daytimed \
+		in.discardd in.echod in.dhcpd in.mpathd in.ndpd \
 		in.ripngd in.timed inetd mdnsd ncaconfd pppoe \
 		slpd vrrpd wpad
 
 MSGSUBDIRS=	ilbd inetd ncaconfd vrrpd
+MSGSUBDIRS+=	dsvclockd in.dhcpd
 
 include ../../Makefile.cmd
 include ./Makefile.lib
 
 POFILES=	inetd/inetd.po ncaconfd/ncaconfd.po vrrpd/vrrpd.po
+POFILES+=	dsvclockd/dsvclockd.po in.dhcpd/in.dhcpd.po
 POFILE=		usr.lib.po
 
 all:=		TARGET= all
@@ -53,9 +54,18 @@ install: $(SUBDIRS)
 	-$(LN) $(ISAEXEC) $(ROOTLIBINET)/in.iked
 
 
-_msg: $(MSGSUBDIRS)
+_msg: $(MSGSUBDIRS) 
 
+#
+# The reason this rule checks for the existence of the
+# Makefile is that some of the directories do not exist
+# in our exportable source builds or in OpenSolaris.
+#
 $(SUBDIRS): FRC
-	@cd $@; pwd; $(MAKE) $(MFLAGS) $(TARGET)
+	@if [ -f $@/Makefile  ]; then \
+		cd $@; pwd; $(MAKE) $(TARGET); \
+	else \
+		true; \
+	fi
 
 FRC:
