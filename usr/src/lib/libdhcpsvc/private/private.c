@@ -251,7 +251,7 @@ enumerate_dd(char ***modules, int *nump)
 	if (modules == NULL || nump == NULL)
 		return (DSVC_INVAL);
 
-	(void) snprintf(globpat, sizeof (globpat), "%s%s/%s_*\\.so",
+	(void) snprintf(globpat, sizeof (globpat), "%s%s/%s_*.so",
 	    DHCP_CONFOPT_ROOT, DSVC_MODULE_DIR, DSVC_PUBLIC_PREFIX);
 
 	retval = glob(globpat, GLOB_NOSORT, NULL, &globbuf);
